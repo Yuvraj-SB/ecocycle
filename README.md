@@ -66,8 +66,5 @@ Our solution is that we will design and implement an automated CI/CD pipeline th
 ## 3. Pipeline Design
 
 **Figure 1:** CI Workflow
-![EcoCycle CI Pipeline](assets/ci-flow.png)
-
-**Figure 2:** CD Workflow
-![EcoCycle CD Pipeline](assets/cd-flow.png)
+![EcoCycle CI Pipeline](assets/flow.png)
 
