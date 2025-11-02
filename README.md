@@ -3,8 +3,8 @@
 ## Team Members
 | Name | Unity ID |
 |------|-----------|
-| *Manav Shah* | mdshah5 | 
-| *Yuvraj Singh Bhatia* | ybhatia2 | 
+| **Manav Shah** | mdshah5 | 
+| **Yuvraj Singh Bhatia** | ybhatia2 | 
 
 ---
 ## 1. Problem Statement & Description
@@ -22,7 +22,7 @@ Our solution is that we will design and implement an automated CI/CD pipeline th
 
 ## 2. Use Case
 
-### Use Case: PR to release/* Triggers Automated Secure Deployment
+### Use Case: PR to `release/*` Triggers Automated Secure Deployment
 
 #### Preconditions
 - A release branch exists and branch-protection rules are enabled.  
@@ -30,43 +30,44 @@ Our solution is that we will design and implement an automated CI/CD pipeline th
 - GitHub Container Registry (GHCR) access is set up.
 
 #### Main Flow
-1. Developer opens a Pull Request (PR) into release/*.  
-2. *Continuous Integration (Test Environment)*  
+1. Developer opens a Pull Request (PR) into `release/*`.  
+2. **Continuous Integration (Test Environment)**  
    - Runs Checkstyle & Spotless lint
    - Maven tests (JUnit & integration)
    - Static analysis.  
    - Security scans.  
    - If all checks pass → proceed to step 3.  
-   - *If tests or scans fail, the pipeline terminates ([E1], **[E2]*).  
-3. *Image Build and Push*  
+   - **If tests or scans fail**, the pipeline terminates (**[E1]**, **[E2]**).  
+3. **Image Build and Push**  
    - If all checks pass, Docker images for Marketplace, Transactions, and Users are built and pushed to GHCR.
-4. *Continuous Deployment (Staging Environment)*  
+4. **Continuous Deployment (Staging Environment)**  
    - Ansible provisions the remote server (installs Docker, pulls images, starts docker compose up -d).
-   - Executes *health checks on staging*  
+   - Executes **health checks on staging**  
    - If staging passes → proceed to step 5.  
-   - If staging fails → rollback to previous stable image ([E3]).  
-5. *Production Deployment*  
+   - If staging fails → rollback to previous stable image (**[E3]**).  
+5. **Production Deployment**  
    - Ansible promotes the same images to production.  
-   - Executes *post-deploy health checks* in production.  
-   - Rollback triggered automatically if production fails threshold ([E4]).  
+   - Executes **post-deploy health checks** in production.  
+   - Rollback triggered automatically if production fails threshold (**[E4]**).  
 
 #### Subflows
-- *[S1]* Developer creates PR with commit message and reviewers.
-- *[S2]* PR approved → CI workflow starts automatically.  
-- *[S3]* Ansible logs and deployment artifacts stored for auditing.
+- **[S1]** Developer creates PR with commit message and reviewers.
+- **[S2]** PR approved → CI workflow starts automatically.  
+- **[S3]** Ansible logs and deployment artifacts stored for auditing.
 
 #### Alternative / Error Flows
-- *[E1]* Build or tests fail → pipeline stops in CI stage.  
-- *[E2]* Security scan finds critical CVE  → deployment blocked.  
-- *[E3]* Health check failure in staging → rollback.  
-- *[E4]* Production health degradation → automatic rollback to last stable release.
+- **[E1]** Build or tests fail → pipeline stops in CI stage.  
+- **[E2]** Security scan finds critical CVE  → deployment blocked.  
+- **[E3]** Health check failure in staging → rollback.  
+- **[E4]** Production health degradation → automatic rollback to last stable release.
 
 ---
 
 ## 3. Pipeline Design
 
-*Figure 1:* CI Workflow
+**Figure 1:** CI Workflow
 ![EcoCycle CI Pipeline](assets/ci-flow.png)
 
-*Figure 2:* CD Workflow
+**Figure 2:** CD Workflow
 ![EcoCycle CD Pipeline](assets/cd-flow.png)
+
