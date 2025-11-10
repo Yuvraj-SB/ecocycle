@@ -15,7 +15,7 @@ EcoCycle is a marketplace which focuses on sustainability, it is built with thre
 ### Why It Matters
 Automation is important because without automation, even a small change in code can break a service. Manual deployments sometimes lead to version mismatches or config mistakes or can cause unexpected downtime which can create an issue for active user transactions. Without the security or health checks, the system also becomes more prone to bugs, regressions and security risks.
 
-### Our Solution
+ Our Solution
 Our solution is that we will design and implement an automated CI/CD pipeline that will build, test, scan for any bug, and deploy the microservices using GitHub Actions and Ansible automatically. The pipeline will check the quality of code through linting, testing, analysis and then it will build secure container images for deployment. It will use a controlled release process to deploy these containers to a remote server and will have health checks, security scans, and Blue/Green staging to make sure that every update is safe, stable, and reliable from commit to production.
 
 ---
