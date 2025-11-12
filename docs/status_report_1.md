@@ -36,11 +36,11 @@ Our work lays the groundwork for automated builds, testing, and deployment in la
 
 | Team Member       | Planned Work                                               | Details / Est. Effort                                                                                                                                             |
 |-------------------|------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Manav Shah**    | Implement **Continuous Integration (CI) Workflow)**        | Implement `.github/workflows/ci.yml`. Build + test + static analysis + security scan + push Docker images to GHCR. Estimate ~ 8 hours.                            |
-| **Yuvraj Bhatia** | Implement **Continuous Deployment (CD) Staging Workflow)** | Develop Ansible playbook (`roles/deploy/tasks/main.yml`) and `cd_staging.yml` to deploy tested images to VCL host using blue/green strategy. Estimate ~ 10 hours. |
+| **Manav Shah**    | Implement **Continuous Integration (CI) Workflow**        | Implement `.github/workflows/ci.yml`. Build + test + static analysis + security scan + push Docker images to GHCR. Estimate ~ 8 hours.                            |
+| **Yuvraj Bhatia** | Implement **Continuous Deployment (CD) Staging Workflow** | Develop Ansible playbook (`roles/deploy/tasks/main.yml`) and `cd_staging.yml` to deploy tested images to VM host using blue/green strategy. Estimate ~ 10 hours. |
 | **Both**          | **Documentation and Testing**                    | Estimate ~ 4 hours.                                                                                                                                               |
 
-Both members will jointly verify environment provisioning, health checks, and rollback behavior on the VCL host.
+Both members will jointly verify environment provisioning, health checks, and rollback behavior on the VM host.
 
 ---
 
@@ -53,9 +53,9 @@ Both members will jointly verify environment provisioning, health checks, and ro
 - Early branch-protection rules prevented accidental direct commits to main.
 
 ### What Didn’t Work
-- VCL access from home was not supportive. Had to troubleshoot several times and use VPN.
+- VM access from home was not supportive. Had to troubleshoot several times and use VPN.
 - Faced issues in running the CI workflow.
-- Faced challenges to configure the public key set up at the VCL.
+- Faced challenges to configure the public key set up at the VM.
 
 ### Improvements for Next Sprint
 - Smooth functioning of CI/CD workflow across all environments.
