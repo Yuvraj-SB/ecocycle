@@ -63,7 +63,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'maven'
 
       - name: Set up Docker permissions
         run: |
@@ -115,7 +114,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'maven'
 
       - name: Set up Docker permissions
         run: |
@@ -193,7 +191,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'maven'
 
       - name: Set up Docker permissions
         run: |
@@ -244,7 +241,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'maven'
 
       - name: Set up Docker permissions
         run: |
