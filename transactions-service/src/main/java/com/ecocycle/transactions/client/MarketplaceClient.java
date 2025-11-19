@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+/** Client for external service communication. */
 @Component
 public class MarketplaceClient {
 
@@ -15,6 +16,7 @@ public class MarketplaceClient {
     this.baseUrl = baseUrl;
   }
 
+  /** Getlisting method. */
   public ListingDto getListing(Long id, String token) {
     return webClient
         .get()

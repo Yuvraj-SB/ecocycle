@@ -8,12 +8,14 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/** Service class for UserService. */
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
   private final UserRepository repo;
 
+  /** Create method. */
   public UserDto create(CreateUserRequest req) {
     User u = new User();
     u.setUsername(req.username());
@@ -27,6 +29,7 @@ public class UserService {
     return repo.findAll().stream().map(UserDto::from).toList();
   }
 
+  /** Get method. */
   public UserDto get(Long id) {
     return repo.findById(id)
         .map(UserDto::from)
@@ -34,6 +37,7 @@ public class UserService {
   }
 
   // this will be called by Transactions later
+  /** Incrementgreenscore method. */
   public UserDto incrementGreenScore(Long id, int delta) {
     User u = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
     u.setGreenScore(u.getGreenScore() + delta);

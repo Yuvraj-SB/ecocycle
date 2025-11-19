@@ -5,17 +5,30 @@ import io.jsonwebtoken.security.Keys;
 import java.util.Date;
 import javax.crypto.SecretKey;
 
+/** Security utility class for JwtUtil. */
 public class JwtUtil {
 
   private final SecretKey key;
   private final long expiration;
 
+  /**
+   * Constructor for JwtUtil.
+   *
+   * @param secret JWT secret key
+   * @param expiration token expiration time in milliseconds
+   */
   public JwtUtil(String secret, long expiration) {
     // ✅ generate HMAC-SHA key from string
     this.key = Keys.hmacShaKeyFor(secret.getBytes());
     this.expiration = expiration;
   }
 
+  /**
+   * Generates a JWT token for a user.
+   *
+   * @param userId user ID
+   * @return JWT token string
+   */
   public String generateToken(Long userId) {
     return Jwts.builder()
         .subject(String.valueOf(userId))
@@ -24,6 +37,12 @@ public class JwtUtil {
         .compact();
   }
 
+  /**
+   * Validates JWT token and extracts user ID.
+   *
+   * @param token JWT token string
+   * @return user ID
+   */
   public Long validateAndExtractUserId(String token) {
     var claims =
         Jwts.parser()

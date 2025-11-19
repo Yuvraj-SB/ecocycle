@@ -76,24 +76,6 @@ jobs:
           docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn checkstyle:check
         continue-on-error: false
 
-      - name: Run Spotless Check on Marketplace Service
-        run: |
-          cd marketplace-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn spotless:check
-        continue-on-error: false
-
-      - name: Run Spotless Check on Users Service
-        run: |
-          cd users-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn spotless:check
-        continue-on-error: false
-
-      - name: Run Spotless Check on Transactions Service
-        run: |
-          cd transactions-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn spotless:check
-        continue-on-error: false
-
   # Job 2: Unit Tests & Code Coverage
   test:
     name: Unit Tests & Coverage

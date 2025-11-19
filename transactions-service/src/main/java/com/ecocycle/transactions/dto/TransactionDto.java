@@ -4,6 +4,7 @@ import com.ecocycle.transactions.model.Transaction;
 import com.ecocycle.transactions.model.TransactionStatus;
 import java.math.BigDecimal;
 
+/** Data transfer object for TransactionDto. */
 public record TransactionDto(
     Long id,
     Long listingId,
