@@ -21,6 +21,12 @@ jobs:
     runs-on: self-hosted
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Remove target directories with root-owned files from previous runs
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Checkout code
         uses: actions/checkout@v4
       
@@ -301,6 +307,12 @@ jobs:
         service: [marketplace-service, users-service, transactions-service]
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Remove target directories with root-owned files from previous runs
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -377,6 +389,12 @@ jobs:
           - 5432:5432
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Remove target directories with root-owned files from previous runs
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -404,6 +422,12 @@ jobs:
     if: always()
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Final cleanup of all target directories
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Check build status
         run: |
           echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
