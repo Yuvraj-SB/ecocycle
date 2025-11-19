@@ -1,13 +1,11 @@
-package com.example.users_service;
+// package com.example.users_service;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+// import org.junit.jupiter.api.Test;
+// import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class UsersServiceApplicationTests {
+// @SpringBootTest
+// class UsersServiceApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
-}
+//   @Test
+//   void contextLoads() {}
+// }

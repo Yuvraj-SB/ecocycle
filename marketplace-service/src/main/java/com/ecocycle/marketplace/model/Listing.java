@@ -1,17 +1,15 @@
 package com.ecocycle.marketplace.model;
 
+import jakarta.persistence.*;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import jakarta.persistence.*;
-import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.Instant;
+import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "listings")
@@ -19,16 +17,19 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Listing {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String title;
-    private String description;
-    @Enumerated(EnumType.STRING)
-    private ListingType type; // SALE, RENTAL, DONATION
-    private BigDecimal price;
-    private String condition;
-    private String location;
-    private Long ownerId;
-    private Instant createdAt = Instant.now();
-}
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
+  private String title;
+  private String description;
+
+  @Enumerated(EnumType.STRING)
+  private ListingType type; // SALE, RENTAL, DONATION
+
+  private BigDecimal price;
+  private String condition;
+  private String location;
+  private Long ownerId;
+  private Instant createdAt = Instant.now();
+}

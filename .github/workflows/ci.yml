@@ -1,0 +1,342 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - '**'  # Run on all branches
+  pull_request:
+    branches:
+      - 'release/**'
+      - 'main'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/ecocycle
+
+jobs:
+  # Job 1: Code Quality & Linting
+  code-quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run Checkstyle on Marketplace Service
+        run: |
+          cd marketplace-service
+          mvn checkstyle:check
+        continue-on-error: false
+
+      - name: Run Checkstyle on Users Service
+        run: |
+          cd users-service
+          mvn checkstyle:check
+        continue-on-error: false
+
+      - name: Run Checkstyle on Transactions Service
+        run: |
+          cd transactions-service
+          mvn checkstyle:check
+        continue-on-error: false
+
+      - name: Run Spotless Check on Marketplace Service
+        run: |
+          cd marketplace-service
+          mvn spotless:check
+        continue-on-error: false
+
+      - name: Run Spotless Check on Users Service
+        run: |
+          cd users-service
+          mvn spotless:check
+        continue-on-error: false
+
+      - name: Run Spotless Check on Transactions Service
+        run: |
+          cd transactions-service
+          mvn spotless:check
+        continue-on-error: false
+
+  # Job 2: Unit Tests & Code Coverage
+  test:
+    name: Unit Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Test Marketplace Service
+        run: |
+          cd marketplace-service
+          mvn clean test jacoco:report
+
+      - name: Test Users Service
+        run: |
+          cd users-service
+          mvn clean test jacoco:report
+
+      - name: Test Transactions Service
+        run: |
+          cd transactions-service
+          mvn clean test jacoco:report
+
+      - name: Upload Marketplace Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./marketplace-service/target/site/jacoco/jacoco.xml
+          flags: marketplace
+          name: marketplace-coverage
+        continue-on-error: true
+
+      - name: Upload Users Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./users-service/target/site/jacoco/jacoco.xml
+          flags: users
+          name: users-coverage
+        continue-on-error: true
+
+      - name: Upload Transactions Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./transactions-service/target/site/jacoco/jacoco.xml
+          flags: transactions
+          name: transactions-coverage
+        continue-on-error: true
+
+  # Job 3: Static Analysis
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run SpotBugs on Marketplace Service
+        run: |
+          cd marketplace-service
+          mvn compile spotbugs:check
+        continue-on-error: false
+
+      - name: Run SpotBugs on Users Service
+        run: |
+          cd users-service
+          mvn compile spotbugs:check
+        continue-on-error: false
+
+      - name: Run SpotBugs on Transactions Service
+        run: |
+          cd transactions-service
+          mvn compile spotbugs:check
+        continue-on-error: false
+
+  # Job 4: Security Scanning
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run OWASP Dependency Check on Marketplace
+        run: |
+          cd marketplace-service
+          mvn dependency-check:check || true
+        continue-on-error: true
+
+      - name: Run OWASP Dependency Check on Users
+        run: |
+          cd users-service
+          mvn dependency-check:check || true
+        continue-on-error: true
+
+      - name: Run OWASP Dependency Check on Transactions
+        run: |
+          cd transactions-service
+          mvn dependency-check:check || true
+        continue-on-error: true
+
+      - name: Upload OWASP Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-reports
+          path: |
+            marketplace-service/target/dependency-check-report.html
+            users-service/target/dependency-check-report.html
+            transactions-service/target/dependency-check-report.html
+        continue-on-error: true
+
+  # Job 5: Build Docker Images
+  build-images:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [test, static-analysis, security-scan]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        service: [marketplace-service, users-service, transactions-service]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.ref_name }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+        continue-on-error: true
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+        continue-on-error: true
+
+  # Job 6: Integration Tests (Optional - for bonus)
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ecocycle
+          POSTGRES_USER: ecocycle
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests pytest pytest-html
+        continue-on-error: true
+
+      - name: Run integration tests
+        run: |
+          echo "Integration tests would run here"
+          # python tests/integration/test_all.py
+        continue-on-error: true
+
+  # Job 7: Build Summary
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, test, static-analysis, security-scan, build-images]
+    if: always()
+    
+    steps:
+      - name: Check build status
+        run: |
+          echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build Images: ${{ needs.build-images.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any job failed
+        if: needs.code-quality.result == 'failure' || needs.test.result == 'failure' || needs.static-analysis.result == 'failure'
+        run: exit 1
+

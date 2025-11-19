@@ -1,13 +1,13 @@
-//package com.manav.marketplace_service;
+// package com.manav.marketplace_service;
 //
-//import org.junit.jupiter.api.Test;
-//import org.springframework.boot.test.context.SpringBootTest;
+// import org.junit.jupiter.api.Test;
+// import org.springframework.boot.test.context.SpringBootTest;
 //
-//@SpringBootTest
-//class MarketplaceServiceApplicationTests {
+// @SpringBootTest
+// class MarketplaceServiceApplicationTests {
 //
 //	@Test
 //	void contextLoads() {
 //	}
 //
-//}
+// }

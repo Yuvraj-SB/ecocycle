@@ -7,20 +7,21 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Component
 public class MarketplaceClient {
 
-    private final WebClient webClient;
-    private final String baseUrl;
+  private final WebClient webClient;
+  private final String baseUrl;
 
-    public MarketplaceClient(@Value("${marketplace.base-url:http://localhost:8081}") String baseUrl) {
-        this.webClient = WebClient.builder().build();
-        this.baseUrl = baseUrl;
-    }
+  public MarketplaceClient(@Value("${marketplace.base-url:http://localhost:8081}") String baseUrl) {
+    this.webClient = WebClient.builder().build();
+    this.baseUrl = baseUrl;
+  }
 
-    public ListingDto getListing(Long id, String token) {
-        return webClient.get()
-                .uri(baseUrl + "/listings/{id}", id)
-                .header("Authorization", "Bearer " + token) // ✅ add token
-                .retrieve()
-                .bodyToMono(ListingDto.class)
-                .block();
-    }
+  public ListingDto getListing(Long id, String token) {
+    return webClient
+        .get()
+        .uri(baseUrl + "/listings/{id}", id)
+        .header("Authorization", "Bearer " + token) // ✅ add token
+        .retrieve()
+        .bodyToMono(ListingDto.class)
+        .block();
+  }
 }

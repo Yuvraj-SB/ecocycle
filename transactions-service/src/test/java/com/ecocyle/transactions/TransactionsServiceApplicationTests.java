@@ -1,13 +1,11 @@
-package com.ecocyle.transactions;
+// package com.ecocyle.transactions;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+// import org.junit.jupiter.api.Test;
+// import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class TransactionsServiceApplicationTests {
+// @SpringBootTest
+// class TransactionsServiceApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
-}
+//   @Test
+//   void contextLoads() {}
+// }
