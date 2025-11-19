@@ -21,12 +21,6 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Clean workspace
-        run: |
-          sudo rm -rf ${{ github.workspace }}/* || true
-          sudo rm -rf ${{ github.workspace }}/.* 2>/dev/null || true
-        continue-on-error: true
-      
       - name: Checkout code
         uses: actions/checkout@v4
       
@@ -49,6 +43,12 @@ jobs:
     needs: validate
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Remove target directories with root-owned files from previous runs
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -81,6 +81,12 @@ jobs:
           cd transactions-service
           docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn checkstyle:check
         continue-on-error: false
+      
+      - name: Cleanup target directories
+        if: always()
+        run: |
+          # Fix ownership of Docker-created files
+          sudo chown -R $USER:$USER ${{ github.workspace }}/*/target || true
 
   # Job 2: Unit Tests & Code Coverage
   test:
@@ -89,6 +95,12 @@ jobs:
     needs: [validate, code-quality]
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Remove target directories with root-owned files from previous runs
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -118,6 +130,12 @@ jobs:
           cd transactions-service
           docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn clean test jacoco:report
 
+      - name: Fix file permissions for coverage reports
+        if: always()
+        run: |
+          # Fix ownership so GitHub Actions can read the reports
+          sudo chown -R $USER:$USER ${{ github.workspace }}/*/target || true
+
       - name: Upload Marketplace Coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -141,6 +159,12 @@ jobs:
           flags: transactions
           name: transactions-coverage
         continue-on-error: true
+      
+      - name: Cleanup target directories
+        if: always()
+        run: |
+          # Clean up Docker-created files for next run
+          sudo rm -rf ${{ github.workspace }}/*/target || true
 
   # Job 3: Static Analysis
   static-analysis:
@@ -149,6 +173,12 @@ jobs:
     needs: [validate, code-quality]
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Remove target directories with root-owned files from previous runs
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -180,6 +210,12 @@ jobs:
           cd transactions-service
           docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check
         continue-on-error: false
+      
+      - name: Cleanup target directories
+        if: always()
+        run: |
+          # Fix ownership of Docker-created files
+          sudo chown -R $USER:$USER ${{ github.workspace }}/*/target || true
 
   # Job 4: Security Scanning
   security-scan:
@@ -188,6 +224,12 @@ jobs:
     needs: [validate, code-quality]
     
     steps:
+      - name: Clean workspace
+        run: |
+          # Remove target directories with root-owned files from previous runs
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -220,6 +262,12 @@ jobs:
           docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
         continue-on-error: true
 
+      - name: Fix file permissions for reports
+        if: always()
+        run: |
+          # Fix ownership so GitHub Actions can read the reports
+          sudo chown -R $USER:$USER ${{ github.workspace }}/*/target || true
+
       - name: Upload OWASP Reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -230,6 +278,12 @@ jobs:
             users-service/target/dependency-check-report.html
             transactions-service/target/dependency-check-report.html
         continue-on-error: true
+      
+      - name: Cleanup target directories
+        if: always()
+        run: |
+          # Clean up Docker-created files for next run
+          sudo rm -rf ${{ github.workspace }}/*/target || true
 
   # Job 5: Build Docker Images
   build-images:
