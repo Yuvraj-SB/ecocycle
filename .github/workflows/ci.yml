@@ -17,7 +17,7 @@ jobs:
   # Job 1: Code Quality & Linting
   code-quality:
     name: Code Quality & Linting
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - name: Checkout code
@@ -69,7 +69,7 @@ jobs:
   # Job 2: Unit Tests & Code Coverage
   test:
     name: Unit Tests & Coverage
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: code-quality
     
     steps:
@@ -125,7 +125,7 @@ jobs:
   # Job 3: Static Analysis
   static-analysis:
     name: Static Analysis
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: code-quality
     
     steps:
@@ -160,7 +160,7 @@ jobs:
   # Job 4: Security Scanning
   security-scan:
     name: Security Scanning
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: code-quality
     
     steps:
@@ -206,7 +206,7 @@ jobs:
   # Job 5: Build Docker Images
   build-images:
     name: Build & Push Docker Images
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [test, static-analysis, security-scan]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
     
@@ -275,7 +275,7 @@ jobs:
   # Job 6: Integration Tests (Optional - for bonus)
   integration-tests:
     name: Integration Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-images
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
     
@@ -317,7 +317,7 @@ jobs:
   # Job 7: Build Summary
   build-summary:
     name: Build Summary
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [code-quality, test, static-analysis, security-scan, build-images]
     if: always()
     
