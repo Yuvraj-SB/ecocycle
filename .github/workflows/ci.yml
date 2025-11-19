@@ -53,45 +53,40 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Set up Maven
-        uses: stCarolas/setup-maven@v5
-        with:
-          maven-version: '3.9.6'
-
       - name: Run Checkstyle on Marketplace Service
         run: |
           cd marketplace-service
-          mvn checkstyle:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn checkstyle:check
         continue-on-error: false
 
       - name: Run Checkstyle on Users Service
         run: |
           cd users-service
-          mvn checkstyle:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn checkstyle:check
         continue-on-error: false
 
       - name: Run Checkstyle on Transactions Service
         run: |
           cd transactions-service
-          mvn checkstyle:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn checkstyle:check
         continue-on-error: false
 
       - name: Run Spotless Check on Marketplace Service
         run: |
           cd marketplace-service
-          mvn spotless:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn spotless:check
         continue-on-error: false
 
       - name: Run Spotless Check on Users Service
         run: |
           cd users-service
-          mvn spotless:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn spotless:check
         continue-on-error: false
 
       - name: Run Spotless Check on Transactions Service
         run: |
           cd transactions-service
-          mvn spotless:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn spotless:check
         continue-on-error: false
 
   # Job 2: Unit Tests & Code Coverage
@@ -111,25 +106,20 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Set up Maven
-        uses: stCarolas/setup-maven@v5
-        with:
-          maven-version: '3.9.6'
-
       - name: Test Marketplace Service
         run: |
           cd marketplace-service
-          mvn clean test jacoco:report
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn clean test jacoco:report
 
       - name: Test Users Service
         run: |
           cd users-service
-          mvn clean test jacoco:report
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn clean test jacoco:report
 
       - name: Test Transactions Service
         run: |
           cd transactions-service
-          mvn clean test jacoco:report
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn clean test jacoco:report
 
       - name: Upload Marketplace Coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -172,27 +162,22 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Set up Maven
-        uses: stCarolas/setup-maven@v5
-        with:
-          maven-version: '3.9.6'
-
       - name: Run SpotBugs on Marketplace Service
         run: |
           cd marketplace-service
-          mvn compile spotbugs:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check
         continue-on-error: false
 
       - name: Run SpotBugs on Users Service
         run: |
           cd users-service
-          mvn compile spotbugs:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check
         continue-on-error: false
 
       - name: Run SpotBugs on Transactions Service
         run: |
           cd transactions-service
-          mvn compile spotbugs:check
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check
         continue-on-error: false
 
   # Job 4: Security Scanning
@@ -212,27 +197,22 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Set up Maven
-        uses: stCarolas/setup-maven@v5
-        with:
-          maven-version: '3.9.6'
-
       - name: Run OWASP Dependency Check on Marketplace
         run: |
           cd marketplace-service
-          mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
         continue-on-error: true
 
       - name: Run OWASP Dependency Check on Users
         run: |
           cd users-service
-          mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
         continue-on-error: true
 
       - name: Run OWASP Dependency Check on Transactions
         run: |
           cd transactions-service
-          mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
         continue-on-error: true
 
       - name: Upload OWASP Reports
