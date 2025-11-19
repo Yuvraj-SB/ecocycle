@@ -12,12 +12,35 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository_owner }}/ecocycle
+  SERVICES: marketplace-service users-service transactions-service
 
 jobs:
+  # Job 0: Validation
+  validate:
+    name: Validate Project Structure
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Verify service directories exist
+        run: |
+          echo "Validating project structure..."
+          for service in marketplace-service users-service transactions-service; do
+            if [ ! -d "$service" ]; then
+              echo "❌ ERROR: Directory $service not found!"
+              exit 1
+            fi
+            echo "✅ Found: $service"
+          done
+          echo "✅ All service directories validated successfully"
+
   # Job 1: Code Quality & Linting
   code-quality:
     name: Code Quality & Linting
     runs-on: self-hosted
+    needs: validate
     
     steps:
       - name: Checkout code
@@ -70,7 +93,7 @@ jobs:
   test:
     name: Unit Tests & Coverage
     runs-on: self-hosted
-    needs: code-quality
+    needs: [validate, code-quality]
     
     steps:
       - name: Checkout code
@@ -126,7 +149,7 @@ jobs:
   static-analysis:
     name: Static Analysis
     runs-on: self-hosted
-    needs: code-quality
+    needs: [validate, code-quality]
     
     steps:
       - name: Checkout code
@@ -161,7 +184,7 @@ jobs:
   security-scan:
     name: Security Scanning
     runs-on: self-hosted
-    needs: code-quality
+    needs: [validate, code-quality]
     
     steps:
       - name: Checkout code
@@ -318,7 +341,7 @@ jobs:
   build-summary:
     name: Build Summary
     runs-on: self-hosted
-    needs: [code-quality, test, static-analysis, security-scan, build-images]
+    needs: [validate, code-quality, test, static-analysis, security-scan, build-images]
     if: always()
     
     steps:
