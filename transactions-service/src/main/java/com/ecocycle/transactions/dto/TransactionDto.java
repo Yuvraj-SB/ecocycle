@@ -12,6 +12,12 @@ public record TransactionDto(
     Long sellerId,
     TransactionStatus status,
     BigDecimal agreedPrice) {
+  /**
+   * Converts a Transaction entity to DTO.
+   *
+   * @param t transaction entity
+   * @return transaction DTO
+   */
   public static TransactionDto from(Transaction t) {
     return new TransactionDto(
         t.getId(),
