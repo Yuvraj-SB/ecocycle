@@ -357,7 +357,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=true
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -375,69 +375,17 @@ jobs:
             VCS_REF=${{ github.sha }}
             VERSION=${{ github.ref_name }}
 
-      - name: Determine image tag for Trivy
-        id: image-tag
-        run: |
-          # Use the first tag from metadata, or fallback to branch name
-          IMAGE_TAG="${{ github.ref_name }}"
-          if [ -n "${{ steps.meta.outputs.tags }}" ]; then
-            # Extract first tag (remove registry prefix, get just the tag part)
-            FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1 | sed 's|.*:||' | tr -d '[:space:]')
-            if [ -n "$FIRST_TAG" ]; then
-              IMAGE_TAG="$FIRST_TAG"
-            fi
-          fi
-          echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "Using image tag: $IMAGE_TAG for Trivy scan"
-          echo "Full image ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:$IMAGE_TAG"
-
-      - name: Authenticate Trivy with container registry
-        run: |
-          # Trivy needs to authenticate to pull images from private registry
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin || true
-
       - name: Run Trivy vulnerability scanner
-        id: trivy
         uses: aquasecurity/trivy-action@0.20.0
-        env:
-          TMPDIR: ${{ runner.temp }}/docker-tmp
-          TRIVY_USERNAME: ${{ github.actor }}
-          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.image-tag.outputs.tag }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
           format: 'sarif'
           output: 'trivy-results-${{ matrix.service }}.sarif'
-          exit-code: '0'
-          severity: 'CRITICAL,HIGH'
-          trivyignores: ''
         continue-on-error: true
-
-      - name: Check if Trivy results exist
-        id: check-trivy
-        if: always()
-        run: |
-          if [ -f "trivy-results-${{ matrix.service }}.sarif" ]; then
-            echo "file_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Trivy results file found"
-            ls -lh "trivy-results-${{ matrix.service }}.sarif"
-            # Verify it's a valid SARIF file
-            if [ -s "trivy-results-${{ matrix.service }}.sarif" ]; then
-              echo "✅ File is not empty"
-            else
-              echo "⚠️ File is empty"
-              echo "file_exists=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "file_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Trivy results file not found - Trivy scan may have failed"
-            echo "Available files in current directory:"
-            ls -la || true
-            echo "Trivy exit code: ${{ steps.trivy.outcome }}"
-          fi
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always() && steps.check-trivy.outputs.file_exists == 'true'
+        if: always()
         with:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
         continue-on-error: true
