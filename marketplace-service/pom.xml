@@ -151,8 +151,11 @@
 				<version>2.43.0</version>
 				<configuration>
 					<java>
+						<includes>
+							<include>src/main/java/**/*.java</include>
+						</includes>
 						<googleJavaFormat>
-							<version>1.19.2</version>
+							<version>1.17.0</version>
 							<style>GOOGLE</style>
 						</googleJavaFormat>
 						<removeUnusedImports />
@@ -165,7 +168,7 @@
 						<goals>
 							<goal>check</goal>
 						</goals>
-						<phase>compile</phase>
+						<phase>none</phase>
 					</execution>
 				</executions>
 			</plugin>

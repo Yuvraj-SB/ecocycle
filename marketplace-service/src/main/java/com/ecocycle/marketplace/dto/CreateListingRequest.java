@@ -21,5 +21,4 @@ public record CreateListingRequest(
     @NotNull ListingType type,
     BigDecimal price,
     String condition,
-    String location) {
-}
+    String location) {}
