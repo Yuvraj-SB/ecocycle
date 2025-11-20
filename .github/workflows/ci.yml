@@ -9,6 +9,12 @@ on:
       - 'release/**'
       - 'main'
 
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  id-token: write
+
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository_owner }}/ecocycle
@@ -297,6 +303,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     
     strategy:
       matrix:
@@ -356,7 +363,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
