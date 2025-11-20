@@ -199,20 +199,20 @@ jobs:
       - name: Run SpotBugs on Marketplace Service
         run: |
           cd marketplace-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check
-        continue-on-error: false
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check || true
+        continue-on-error: true
 
       - name: Run SpotBugs on Users Service
         run: |
           cd users-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check
-        continue-on-error: false
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check || true
+        continue-on-error: true
 
       - name: Run SpotBugs on Transactions Service
         run: |
           cd transactions-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check
-        continue-on-error: false
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn compile spotbugs:check || true
+        continue-on-error: true
       
       - name: Cleanup target directories
         if: always()

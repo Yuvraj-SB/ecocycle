@@ -2,6 +2,7 @@ package com.ecocycle.common.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
 
@@ -18,8 +19,8 @@ public class JwtUtil {
    * @param expiration token expiration time in milliseconds
    */
   public JwtUtil(String secret, long expiration) {
-    // ✅ generate HMAC-SHA key from string
-    this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    // Generate HMAC-SHA key from string with explicit encoding
+    this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     this.expiration = expiration;
   }
 

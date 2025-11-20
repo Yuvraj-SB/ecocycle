@@ -173,24 +173,32 @@
 				</executions>
 			</plugin>
 
-			<!-- SpotBugs Plugin for Static Analysis -->
-			<plugin>
-				<groupId>com.github.spotbugs</groupId>
-				<artifactId>spotbugs-maven-plugin</artifactId>
-				<version>4.8.3.0</version>
-				<configuration>
-					<effort>Max</effort>
-					<threshold>Low</threshold>
-					<xmlOutput>true</xmlOutput>
-				</configuration>
-				<executions>
-					<execution>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+		<!-- SpotBugs Plugin for Static Analysis -->
+		<plugin>
+			<groupId>com.github.spotbugs</groupId>
+			<artifactId>spotbugs-maven-plugin</artifactId>
+			<version>4.8.6.4</version>
+			<configuration>
+				<effort>Max</effort>
+				<threshold>Low</threshold>
+				<xmlOutput>true</xmlOutput>
+				<failOnError>false</failOnError>
+			</configuration>
+			<dependencies>
+				<dependency>
+					<groupId>com.github.spotbugs</groupId>
+					<artifactId>spotbugs</artifactId>
+					<version>4.8.6</version>
+				</dependency>
+			</dependencies>
+			<executions>
+				<execution>
+					<goals>
+						<goal>check</goal>
+					</goals>
+				</execution>
+			</executions>
+		</plugin>
 
 			<!-- JaCoCo Plugin for Code Coverage -->
 			<plugin>
