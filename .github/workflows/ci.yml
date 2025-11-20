@@ -292,7 +292,7 @@ jobs:
     name: Build & Push Docker Images
     runs-on: self-hosted
     needs: [test, static-analysis, security-scan]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    if: github.event_name == 'push' 
     
     permissions:
       contents: read
@@ -367,7 +367,7 @@ jobs:
     name: Integration Tests
     runs-on: self-hosted
     needs: build-images
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    if: github.event_name == 'push'
     
     services:
       postgres:
