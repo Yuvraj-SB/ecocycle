@@ -42,12 +42,12 @@ jobs:
           echo "Validating project structure..."
           for service in marketplace-service users-service transactions-service; do
             if [ ! -d "$service" ]; then
-              echo "❌ ERROR: Directory $service not found!"
+              echo "ERROR: Directory $service not found!"
               exit 1
             fi
-            echo "✅ Found: $service"
+            echo "Found: $service"
           done
-          echo "✅ All service directories validated successfully"
+          echo "All service directories validated successfully"
 
   # Job 1: Code Quality & Linting
   code-quality:
@@ -456,11 +456,11 @@ jobs:
         run: |
           echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Build Images: ${{ needs.build-images.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Build Images: ${{ needs.build-images.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
