@@ -16,8 +16,9 @@ permissions:
   id-token: write
 
 env:
-  REGISTRY: ghcr.github.ncsu.edu
-  IMAGE_PREFIX: ${{ github.repository_owner }}/ecocycle
+  REGISTRY: docker.io
+  DOCKERHUB_USERNAME: manavshah13
+  IMAGE_PREFIX: manavshah13/ecocycle
   SERVICES: marketplace-service users-service transactions-service
 
 jobs:
@@ -337,14 +338,13 @@ jobs:
         env:
           TMPDIR: ${{ runner.temp }}/docker-tmp
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v2
         env:
           TMPDIR: ${{ runner.temp }}/docker-tmp
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata for Docker
         id: meta
@@ -352,12 +352,12 @@ jobs:
         env:
           TMPDIR: ${{ runner.temp }}/docker-tmp
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          images: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable=true
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -378,7 +378,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
+          image-ref: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}:${{ github.ref_name }}
           format: 'sarif'
           output: 'trivy-results-${{ matrix.service }}.sarif'
         continue-on-error: true
