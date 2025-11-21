@@ -354,10 +354,10 @@ jobs:
         with:
           images: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}
           tags: |
+            type=raw,value=latest
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
