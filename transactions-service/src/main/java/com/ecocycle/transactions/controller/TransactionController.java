@@ -9,12 +9,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
 public class TransactionController {
 
     private final TransactionService service;
+
+    @GetMapping
+    public List<TransactionDto> list() {
+        return service.list();
+    }
 
     @PostMapping("/offer")
     public ResponseEntity<TransactionDto> offer(@Valid @RequestBody CreateOfferRequest req,

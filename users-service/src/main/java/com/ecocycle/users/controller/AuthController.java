@@ -34,12 +34,37 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestParam String email) {
-        User u = repo.findAll().stream()
-                .filter(x -> x.getEmail().equals(email))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        String token = new JwtUtil(secret, expiration).generateToken(u.getId());
-        return ResponseEntity.ok(token);
+    public ResponseEntity<?> login(@RequestParam(required = false) String email,
+                                   @RequestParam(required = false) String userId) {
+        try {
+            User u;
+            if (userId != null && !userId.isEmpty()) {
+                // Login by userId (ID)
+                try {
+                    Long id = Long.parseLong(userId);
+                    u = repo.findById(id)
+                            .orElse(null);
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body("Invalid userId format");
+                }
+            } else if (email != null && !email.isEmpty()) {
+                // Login by email
+                u = repo.findAll().stream()
+                        .filter(x -> x.getEmail().equals(email))
+                        .findFirst()
+                        .orElse(null);
+            } else {
+                return ResponseEntity.badRequest().body("Either email or userId must be provided");
+            }
+            
+            if (u == null) {
+                return ResponseEntity.status(404).body("User not found");
+            }
+            
+            String token = new JwtUtil(secret, expiration).generateToken(u.getId());
+            return ResponseEntity.ok(token);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Login failed: " + e.getMessage());
+        }
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +64,12 @@ public class TransactionService {
                 Instant.now()
         );
         return TransactionDto.from(repo.save(tx));
+    }
+
+    public List<TransactionDto> list() {
+        return repo.findAll().stream()
+                .map(TransactionDto::from)
+                .toList();
     }
 
     public TransactionDto get(Long id) {
