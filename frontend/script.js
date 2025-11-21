@@ -1,5 +1,3 @@
-let token = "";  // GLOBAL TOKEN
-
 function toggleRegister() {
     const usernameInput = document.getElementById("usernameInput");
     const registerBtn = document.getElementById("registerBtn");
@@ -37,10 +35,9 @@ function register() {
         }
         return res.text();
     })
-    .then(jwt => {
-        token = jwt;  // STORE TOKEN
-        alert("Registration successful! You are now logged in.");
-        document.getElementById("result").textContent = "Registered and logged in successfully! You can now call services.";
+    .then(message => {
+        alert("Registration successful!");
+        document.getElementById("result").textContent = "Registration successful! You can now call services.";
         toggleRegister(); // Hide registration fields
     })
     .catch(err => {
@@ -69,10 +66,9 @@ function login() {
         }
         return res.text();
     })
-    .then(jwt => {
-        token = jwt;  // STORE TOKEN
+    .then(message => {
         alert("Login successful!");
-        document.getElementById("result").textContent = "Logged in successfully! You can now call services.";
+        document.getElementById("result").textContent = "Login successful! You can now call services.";
     })
     .catch(err => {
         const errorMsg = err.message || err;
@@ -87,12 +83,6 @@ function login() {
 }
 
 function callService(service) {
-    if (!token) {
-        alert("Please login first!");
-        document.getElementById("result").textContent = "Error: Please login before calling services.";
-        return;
-    }
-    
     let url = "";
 
     if (service === "users") url = "http://localhost:8083/users";
@@ -104,11 +94,7 @@ function callService(service) {
         return;
     }
 
-    fetch(url, {
-        headers: {
-            "Authorization": "Bearer " + token
-        }
-    })
+    fetch(url)
     .then(res => {
         if (!res.ok) {
             throw new Error("HTTP " + res.status);

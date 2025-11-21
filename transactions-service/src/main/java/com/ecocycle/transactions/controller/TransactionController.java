@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /** REST controller for TransactionController. */
 @RestController
@@ -25,6 +26,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class TransactionController {
 
   private final TransactionService service;
+
+  /**
+   * Gets all transactions.
+   *
+   * @return list of transaction DTOs
+   */
+  @GetMapping
+  public List<TransactionDto> list() {
+    return service.list();
+  }
 
   /**
    * Creates a new offer transaction.

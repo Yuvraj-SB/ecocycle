@@ -12,6 +12,7 @@ import com.ecocycle.transactions.model.TransactionStatus;
 import com.ecocycle.transactions.repository.TransactionRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -69,6 +70,13 @@ public class TransactionService {
             Instant.now(),
             Instant.now());
     return TransactionDto.from(repo.save(tx));
+  }
+
+  /** List method. */
+  public List<TransactionDto> list() {
+    return repo.findAll().stream()
+        .map(TransactionDto::from)
+        .toList();
   }
 
   /** Get method. */
