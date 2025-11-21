@@ -49,7 +49,7 @@ During this sprint, we successfully implemented a **complete Continuous Integrat
 
 - [Manav Shah — Complete CI pipeline with quality gates and security scanning.](https://github.ncsu.edu/mdshah5/ecocycle-project/commit/1320d125e35a7a5c644fd9e6309342448c7112e6)
 
-- [Yuvraj Bhatia — Frontend Development and Ansible automation for VM provisioning and deployment.](https://github.ncsu.edu/mdshah5/ecocycle-project/commit/72c313f)
+- [Yuvraj Bhatia — Frontend Development and Ansible automation for VM provisioning and deployment.](https://github.ncsu.edu/mdshah5/ecocycle-project/commit/403396fce31ed0f59d3a262cdc4c048e2514bf1c)
 ---
 
 ## 2. Next Steps (Next Sprint Plan)
