@@ -299,7 +299,16 @@ jobs:
     name: Build & Push Docker Images
     runs-on: self-hosted
     needs: [test, static-analysis, security-scan]
-    if: github.event_name == 'push' 
+    # Build images on:
+    # - Push to any branch (for development/testing)
+    # - PR to release/* branches (for CD pipeline deployment)
+    # - PR to main (for validation, but main doesn't trigger deployment)
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && 
+       (startsWith(github.head_ref, 'release/') || 
+        startsWith(github.base_ref, 'release/') ||
+        github.base_ref == 'main')) 
     
     permissions:
       contents: read
@@ -395,7 +404,12 @@ jobs:
     name: Integration Tests
     runs-on: self-hosted
     needs: build-images
-    if: github.event_name == 'push'
+    # Run integration tests on push OR on PR to release branches
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && 
+       (startsWith(github.head_ref, 'release/') || 
+        startsWith(github.base_ref, 'release/')))
     
     services:
       postgres:

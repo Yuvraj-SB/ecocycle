@@ -1,11 +1,15 @@
 name: CD Pipeline - Production Deployment
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
     branches:
       - 'release/production'
-      - 'main'
-    types: [opened, synchronize, reopened]
+      # Note: Main branch does NOT trigger production deployment
+      # Production deployments come from release/production only
+      # Main is updated AFTER successful production deployment
   workflow_dispatch:
     inputs:
       image_tag:
@@ -26,13 +30,24 @@ jobs:
     name: Deploy to Production
     runs-on: self-hosted
     if: |
-      (github.event.pull_request.base.ref == 'release/production' || 
-       github.event.pull_request.base.ref == 'main' ||
-       (github.event_name == 'workflow_dispatch' && github.event.inputs.confirm_production == 'yes'))
+      (github.event.workflow_run.conclusion == 'success' && 
+       github.event.workflow_run.head_branch == 'release/production') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.confirm_production == 'yes')
     
     steps:
-      - name: Checkout code
+      - name: Checkout code from PR
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+      
+      - name: Verify CI passed
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ CI Pipeline failed. Production deployment cancelled."
+            exit 1
+          fi
+          echo "✅ CI Pipeline passed. Proceeding with production deployment."
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -59,8 +74,10 @@ jobs:
       - name: Deploy to Production
         run: |
           cd ansible
+          # Use branch name as image tag if from workflow_run, otherwise use input
+          IMAGE_TAG="${{ github.event.inputs.image_tag || github.event.workflow_run.head_branch || 'latest' }}"
           ansible-playbook -i inventory/production.ini playbooks/deploy_production.yml \
-            -e "image_tag=${{ github.event.inputs.image_tag || 'latest' }}" \
+            -e "image_tag=${IMAGE_TAG}" \
             -e "dockerhub_username=${{ env.DOCKERHUB_USERNAME }}" \
             -e "dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
             -e "manual_approval=false"

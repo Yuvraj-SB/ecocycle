@@ -1,10 +1,13 @@
 name: CD Pipeline - Staging Deployment
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
     branches:
+      - 'release/staging'
       - 'release/**'
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       image_tag:
@@ -21,11 +24,26 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: self-hosted
-    if: github.event.pull_request.base.ref == 'release/staging' || github.event_name == 'workflow_dispatch'
+    if: |
+      (github.event.workflow_run.conclusion == 'success' && 
+       (contains(github.event.workflow_run.head_branch, 'release/staging') || 
+        contains(github.event.workflow_run.head_branch, 'release/'))) ||
+      github.event_name == 'workflow_dispatch'
     
     steps:
-      - name: Checkout code
+      - name: Checkout code from PR
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+      
+      - name: Verify CI passed
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ CI Pipeline failed. Deployment cancelled."
+            exit 1
+          fi
+          echo "✅ CI Pipeline passed. Proceeding with deployment."
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -52,8 +70,10 @@ jobs:
       - name: Deploy to Staging
         run: |
           cd ansible
+          # Use branch name as image tag if from workflow_run, otherwise use input
+          IMAGE_TAG="${{ github.event.inputs.image_tag || github.event.workflow_run.head_branch || 'latest' }}"
           ansible-playbook -i inventory/staging.ini playbooks/deploy_staging.yml \
-            -e "image_tag=${{ github.event.inputs.image_tag || 'latest' }}" \
+            -e "image_tag=${IMAGE_TAG}" \
             -e "dockerhub_username=${{ env.DOCKERHUB_USERNAME }}" \
             -e "dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}"
         env:
