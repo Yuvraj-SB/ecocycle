@@ -1,0 +1,182 @@
+---
+# Blue-Green Deployment Role
+
+- name: Ensure Docker network exists
+  community.docker.docker_network:
+    name: ecocycle-network
+    state: present
+
+- name: Create blue-green deployment directories
+  file:
+    path: "{{ app_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    mode: '0755'
+  loop:
+    - "blue"
+    - "green"
+    - "blue-green-state"
+
+- name: Get current active environment
+  stat:
+    path: "{{ app_dir }}/blue-green-state/active"
+  register: active_env_file
+
+- name: Read current active environment
+  slurp:
+    src: "{{ app_dir }}/blue-green-state/active"
+  register: active_env_content
+  when: active_env_file.stat.exists
+
+- name: Set current environment fact
+  set_fact:
+    current_active_env: "{{ active_env_content.content | b64decode | trim | default('blue') }}"
+  when: active_env_file.stat.exists
+
+- name: Set default current environment
+  set_fact:
+    current_active_env: "{{ current_environment | default('blue') }}"
+  when: not active_env_file.stat.exists
+
+- name: Determine target environment
+  set_fact:
+    target_env: "{{ 'green' if current_active_env == 'blue' else 'blue' }}"
+
+- name: Display environment information
+  debug:
+    msg:
+      - "Current Active: {{ current_active_env }}"
+      - "Target Environment: {{ target_env }}"
+      - "Deploying to {{ target_env }} environment"
+
+- name: Login to Docker Hub
+  community.docker.docker_login:
+    registry: "{{ docker_registry }}"
+    username: "{{ dockerhub_username }}"
+    password: "{{ dockerhub_token }}"
+  when: dockerhub_token is defined
+  no_log: true
+
+- name: Create docker-compose file for target environment
+  template:
+    src: docker-compose.{{ target_env }}.yml.j2
+    dest: "{{ app_dir }}/{{ target_env }}/docker-compose.{{ target_env }}.yml"
+    owner: "{{ deploy_user }}"
+    mode: '0644'
+  vars:
+    environment: "{{ target_env }}"
+    environment_suffix: "{{ target_env }}"
+
+- name: Stop current active environment before deploying new one
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}/{{ current_active_env }}"
+    project_name: "ecocycle-{{ current_active_env }}"
+    files:
+      - "docker-compose.{{ current_active_env }}.yml"
+    state: absent
+  when: current_active_env != target_env
+  ignore_errors: yes
+
+- name: Deploy to target environment ({{ target_env }})
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}/{{ target_env }}"
+    project_name: "ecocycle-{{ target_env }}"
+    files:
+      - "docker-compose.{{ target_env }}.yml"
+    state: present
+    pull: always
+    recreate: always
+  environment:
+    DOCKERHUB_USERNAME: "{{ dockerhub_username }}"
+    IMAGE_TAG: "{{ image_tag }}"
+    ENVIRONMENT: "{{ target_env }}"
+
+- name: Wait for services to start
+  pause:
+    seconds: "{{ health_check_delay | default(15) }}"
+
+- name: Run health checks on target environment
+  uri:
+    url: "http://{{ ansible_host }}:{{ item.port }}/actuator/health"
+    method: GET
+    status_code: 200
+    timeout: "{{ health_check_timeout }}"
+  register: health_results
+  retries: "{{ health_check_retries }}"
+  delay: "{{ health_check_delay }}"
+  until: health_results.status == 200
+  failed_when: false
+  loop:
+    - { name: "Marketplace", port: "{{ marketplace_port }}" }
+    - { name: "Users", port: "{{ users_port }}" }
+    - { name: "Transactions", port: "{{ transactions_port }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Check if all health checks passed
+  set_fact:
+    all_healthy: "{{ health_results.results | map(attribute='status') | list | select('equalto', 200) | list | length == 3 }}"
+
+- name: Switch traffic to new environment (if healthy)
+  block:
+    - name: Old environment already stopped (no action needed)
+      debug:
+        msg: "Old {{ current_active_env }} environment was stopped before deployment"
+      when: current_active_env != target_env
+
+    - name: Update active environment marker
+      copy:
+        content: "{{ target_env }}"
+        dest: "{{ app_dir }}/blue-green-state/active"
+        owner: "{{ deploy_user }}"
+        mode: '0644'
+
+    - name: Save deployment metadata
+      copy:
+        content: |
+          deployment_id: {{ deployment_id }}
+          image_tag: {{ image_tag }}
+          deployed_at: {{ ansible_date_time.iso8601 }}
+          active_environment: {{ target_env }}
+          previous_environment: {{ current_active_env }}
+        dest: "{{ app_dir }}/blue-green-state/last-deployment.yml"
+        owner: "{{ deploy_user }}"
+        mode: '0644'
+
+    - name: Display success message
+      debug:
+        msg:
+          - "Deployment successful!"
+          - "{{ target_env | upper }} environment is now active and serving traffic"
+          - "Previous {{ current_active_env }} environment has been stopped"
+  when: all_healthy | default(false)
+
+- name: Rollback on health check failure
+  block:
+    - name: Stop failed deployment
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}/{{ target_env }}"
+        project_name: "ecocycle-{{ target_env }}"
+        files:
+          - "docker-compose.{{ target_env }}.yml"
+        state: absent
+
+    - name: Restore previous environment
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}/{{ current_active_env }}"
+        project_name: "ecocycle-{{ current_active_env }}"
+        files:
+          - "docker-compose.{{ current_active_env }}.yml"
+        state: present
+        pull: always
+        recreate: always
+      when: current_active_env != target_env
+
+    - name: Fail with rollback message
+      fail:
+        msg: |
+          Health checks failed on {{ target_env }} environment!
+          Rolled back to {{ current_active_env }} environment
+          Deployment aborted. Please check logs and fix issues before retrying.
+  when: not (all_healthy | default(false))
+

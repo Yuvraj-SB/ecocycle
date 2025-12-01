@@ -1,0 +1,42 @@
+---
+# Deploy Frontend to Environment
+- name: Deploy EcoCycle Frontend
+  hosts: "{{ target_env | default('staging') }}"
+  gather_facts: yes
+  vars:
+    project_root: "{{ playbook_dir | dirname | dirname }}"
+  
+  pre_tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "Deploying Frontend to: {{ env_name }}"
+          - "Target host: {{ ansible_host }}"
+          - "Frontend port: {{ frontend_port | default(8080) }}"
+          - "Deploy user: {{ deploy_user }}"
+    
+    - name: Check if host is reachable
+      ping:
+  
+  roles:
+    - role: common
+      tags: ['setup', 'common']
+    
+    - role: frontend
+      tags: ['frontend', 'deploy']
+    
+    - role: healthcheck
+      tags: ['healthcheck', 'verify']
+      when: enable_healthcheck | default(true)
+  
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "========================================="
+          - "Frontend deployment to {{ env_name }} completed!"
+          - "========================================="
+          - "Frontend URL: http://{{ ansible_host }}:{{ frontend_port | default(8080) }}"
+          - ""
+          - "Deployment completed at {{ ansible_date_time.iso8601 }}"
+

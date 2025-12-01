@@ -1,0 +1,48 @@
+---
+# Blue-Green Deployment Playbook for Production
+- name: Blue-Green Deployment to Production
+  hosts: production
+  gather_facts: yes
+  vars:
+    current_env: "{{ current_environment | default('blue') }}"
+    new_env: "{{ 'green' if current_env == 'blue' else 'blue' }}"
+  
+  pre_tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "========================================="
+          - "Blue-Green Deployment to Production"
+          - "========================================="
+          - "Current Environment: {{ current_env }}"
+          - "New Environment: {{ new_env }}"
+          - "Image Tag: {{ image_tag }}"
+          - "Deployment ID: {{ deployment_id }}"
+          - "Target host: {{ ansible_host }}"
+    
+    - name: Check if host is reachable
+      ping:
+  
+  roles:
+    - role: common
+      tags: ['setup', 'common']
+    
+    - role: bluegreen
+      tags: ['bluegreen', 'deploy']
+    
+    - role: healthcheck
+      tags: ['healthcheck', 'verify']
+  
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "========================================="
+          - "Blue-Green Deployment Completed!"
+          - "========================================="
+          - "Active Environment: {{ new_env }}"
+          - "Previous Environment: {{ current_env }}"
+          - "Services are now running on {{ new_env }} environment"
+          - ""
+          - "If health checks fail, rollback will be triggered automatically"
+

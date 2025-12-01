@@ -1,0 +1,27 @@
+version: "{{ docker_compose_version }}"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ecocycle-frontend
+    ports:
+      - "{{ frontend_port | default(8080) }}:80"
+    restart: unless-stopped
+    networks:
+      - ecocycle-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.ecocycle.service=frontend"
+      - "com.ecocycle.environment={{ env_name }}"
+
+networks:
+  ecocycle-network:
+    external: true
+

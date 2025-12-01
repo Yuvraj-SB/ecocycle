@@ -1,0 +1,168 @@
+version: "{{ docker_compose_version }}"
+
+services:
+  # =======================
+  # Marketplace Service (Blue)
+  # =======================
+  marketplace-blue:
+    image: "{{ dockerhub_username }}/ecocycle-marketplace-service:{{ image_tag }}"
+    container_name: marketplace-service-blue
+    ports:
+      - "{{ marketplace_port }}:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://marketplace-db:5432/marketplace
+      SPRING_DATASOURCE_USERNAME: {{ db_username }}
+      SPRING_DATASOURCE_PASSWORD: {{ db_password }}
+      SPRING_PROFILES_ACTIVE: production
+    depends_on:
+      - marketplace-db
+    networks:
+      - ecocycle-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.ecocycle.service=marketplace"
+      - "com.ecocycle.environment=blue"
+      - "com.ecocycle.deployment={{ deployment_id }}"
+
+  marketplace-db:
+    image: postgres:16
+    container_name: marketplace-db
+    environment:
+      POSTGRES_DB: marketplace
+      POSTGRES_USER: {{ db_username }}
+      POSTGRES_PASSWORD: {{ db_password }}
+    volumes:
+      - marketplace-db-data:/var/lib/postgresql/data
+    networks:
+      - ecocycle-network
+    restart: unless-stopped
+
+  # =======================
+  # Transactions Service (Blue)
+  # =======================
+  transactions-blue:
+    image: "{{ dockerhub_username }}/ecocycle-transactions-service:{{ image_tag }}"
+    container_name: transactions-service-blue
+    ports:
+      - "{{ transactions_port }}:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://transactions-db:5432/transactions
+      SPRING_DATASOURCE_USERNAME: {{ db_username }}
+      SPRING_DATASOURCE_PASSWORD: {{ db_password }}
+      MARKETPLACE_BASE_URL: http://marketplace-blue:8081
+      USERS_BASE_URL: http://users-blue:8083
+      SPRING_PROFILES_ACTIVE: production
+    depends_on:
+      - transactions-db
+      - marketplace-blue
+      - users-blue
+    networks:
+      - ecocycle-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.ecocycle.service=transactions"
+      - "com.ecocycle.environment=blue"
+      - "com.ecocycle.deployment={{ deployment_id }}"
+
+  transactions-db:
+    image: postgres:16
+    container_name: transactions-db
+    environment:
+      POSTGRES_DB: transactions
+      POSTGRES_USER: {{ db_username }}
+      POSTGRES_PASSWORD: {{ db_password }}
+    volumes:
+      - transactions-db-data:/var/lib/postgresql/data
+    networks:
+      - ecocycle-network
+    restart: unless-stopped
+
+  # =======================
+  # Users Service (Blue)
+  # =======================
+  users-blue:
+    image: "{{ dockerhub_username }}/ecocycle-users-service:{{ image_tag }}"
+    container_name: users-service-blue
+    ports:
+      - "{{ users_port }}:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://users-db:5432/users
+      SPRING_DATASOURCE_USERNAME: {{ db_username }}
+      SPRING_DATASOURCE_PASSWORD: {{ db_password }}
+      SPRING_PROFILES_ACTIVE: production
+    depends_on:
+      - users-db
+    networks:
+      - ecocycle-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.ecocycle.service=users"
+      - "com.ecocycle.environment=blue"
+      - "com.ecocycle.deployment={{ deployment_id }}"
+
+  users-db:
+    image: postgres:16
+    container_name: users-db
+    environment:
+      POSTGRES_DB: users
+      POSTGRES_USER: {{ db_username }}
+      POSTGRES_PASSWORD: {{ db_password }}
+    volumes:
+      - users-db-data:/var/lib/postgresql/data
+    networks:
+      - ecocycle-network
+    restart: unless-stopped
+
+  # =======================
+  # Frontend (Blue)
+  # =======================
+  frontend-blue:
+    image: "{{ dockerhub_username }}/ecocycle-frontend:{{ image_tag | default('latest') }}"
+    container_name: ecocycle-frontend-blue
+    ports:
+      - "{{ frontend_port }}:80"
+    depends_on:
+      - users-blue
+      - marketplace-blue
+      - transactions-blue
+    networks:
+      - ecocycle-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.ecocycle.service=frontend"
+      - "com.ecocycle.environment=blue"
+      - "com.ecocycle.deployment={{ deployment_id }}"
+
+volumes:
+  marketplace-db-data:
+  transactions-db-data:
+  users-db-data:
+
+networks:
+  ecocycle-network:
+    external: true
+

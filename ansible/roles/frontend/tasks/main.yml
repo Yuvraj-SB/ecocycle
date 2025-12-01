@@ -1,0 +1,48 @@
+---
+# Frontend deployment role
+
+- name: Ensure Docker network exists
+  community.docker.docker_network:
+    name: ecocycle-network
+    state: present
+
+- name: Ensure frontend directory exists
+  file:
+    path: "{{ app_dir }}/frontend"
+    state: directory
+    owner: "{{ deploy_user }}"
+    mode: '0755'
+
+- name: Copy frontend files to server
+  copy:
+    src: "{{ project_root | default(playbook_dir | dirname | dirname) }}/frontend/"
+    dest: "{{ app_dir }}/frontend/"
+    owner: "{{ deploy_user }}"
+    mode: preserve
+
+- name: Create frontend docker-compose file
+  template:
+    src: docker-compose.frontend.yml.j2
+    dest: "{{ app_dir }}/docker-compose.frontend.yml"
+    owner: "{{ deploy_user }}"
+    mode: '0644'
+
+- name: Deploy frontend service
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    files:
+      - "docker-compose.frontend.yml"
+    state: present
+    pull: always
+    recreate: always
+    build:
+      path: "{{ app_dir }}/frontend"
+      pull: true
+  environment:
+    FRONTEND_PORT: "{{ frontend_port | default(8080) }}"
+    IMAGE_TAG: "{{ image_tag }}"
+
+- name: Wait for frontend to be ready
+  pause:
+    seconds: "{{ health_check_delay | default(10) }}"
+

@@ -1,0 +1,161 @@
+name: CD Pipeline - Production
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - 'release/**'
+      - 'main'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: false
+        default: 'latest'
+      skip_staging:
+        description: 'Skip staging deployment'
+        type: boolean
+        default: false
+
+env:
+  DOCKERHUB_USERNAME: manavshah13
+  IMAGE_PREFIX: manavshah13/ecocycle
+  SERVICES: marketplace-service users-service transactions-service
+
+jobs:
+  # Check if CI pipeline succeeded
+  check-ci-status:
+    name: Check CI Pipeline Status
+    runs-on: ubuntu-latest
+    outputs:
+      ci_success: ${{ steps.check.outputs.ci_success }}
+      image_tag: ${{ steps.check.outputs.image_tag }}
+    
+    steps:
+      - name: Check CI workflow status
+        id: check
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "CI pipeline did not succeed. Skipping deployment."
+            echo "ci_success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Determine image tag
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.image_tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          
+          echo "ci_success=true" >> $GITHUB_OUTPUT
+          echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "CI pipeline succeeded. Proceeding with production deployment."
+          echo "Image tag: ${TAG}"
+
+  # Deploy to Production with Blue-Green
+  deploy-production:
+    name: Deploy to Production (Blue-Green)
+    runs-on: ubuntu-latest
+    needs: check-ci-status
+    if: needs.check-ci-status.outputs.ci_success == 'true'
+    environment:
+      name: production
+      url: http://152.7.176.20:8080
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
+      
+      - name: Configure SSH known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 152.7.176.20 >> ~/.ssh/known_hosts
+      
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+          ansible-galaxy collection install community.docker
+      
+      - name: Set deployment variables
+        id: vars
+        run: |
+          echo "image_tag=${{ needs.check-ci-status.outputs.image_tag }}" >> $GITHUB_OUTPUT
+          echo "deployment_id=$(date +%s)" >> $GITHUB_OUTPUT
+          # Default to 'blue' for first deployment, will be read from server during playbook execution
+          echo "blue_green_active=blue" >> $GITHUB_OUTPUT
+      
+      - name: Run Blue-Green Deployment
+        run: |
+          cd ansible
+          export ANSIBLE_ROLES_PATH=$(pwd)/roles
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          
+          ansible-playbook \
+            -i inventory/production.ini \
+            playbooks/deploy_production_bluegreen.yml \
+            -e "image_tag=${{ steps.vars.outputs.image_tag }}" \
+            -e "deployment_id=${{ steps.vars.outputs.deployment_id }}" \
+            -e "dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
+            -e "current_environment=${{ steps.vars.outputs.blue_green_active }}" \
+            -v
+      
+      - name: Save deployment state
+        run: |
+          cd ansible
+          # This will be updated by the Ansible playbook
+          echo "Deployment state saved"
+      
+      - name: Deployment Summary
+        run: |
+          echo "## Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Deployment completed" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ steps.vars.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment ID:** ${{ steps.vars.outputs.deployment_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Active Environment:** ${{ steps.vars.outputs.blue_green_active }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Services:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Marketplace: http://152.7.176.20:8081" >> $GITHUB_STEP_SUMMARY
+          echo "- Users: http://152.7.176.20:8083" >> $GITHUB_STEP_SUMMARY
+          echo "- Transactions: http://152.7.176.20:8082" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: http://152.7.176.20:8080" >> $GITHUB_STEP_SUMMARY
+
+  # Post-deployment health checks
+  health-check:
+    name: Post-Deployment Health Checks
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: needs.deploy-production.result == 'success'
+    
+    steps:
+      - name: Check service health
+        run: |
+          echo "## Health Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          SERVICES=("marketplace:8081" "users:8083" "transactions:8082")
+          
+          for service in "${SERVICES[@]}"; do
+            name=$(echo $service | cut -d: -f1)
+            port=$(echo $service | cut -d: -f2)
+            
+            if curl -f -s http://152.7.176.20:$port/actuator/health > /dev/null; then
+              echo "$name: HEALTHY" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "$name: UNHEALTHY" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All services are healthy!" >> $GITHUB_STEP_SUMMARY
+
