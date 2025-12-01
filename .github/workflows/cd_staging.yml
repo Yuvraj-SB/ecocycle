@@ -1,0 +1,76 @@
+name: CD Pipeline - Staging Deployment
+
+on:
+  pull_request:
+    branches:
+      - 'release/**'
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: false
+        default: 'latest'
+
+env:
+  ANSIBLE_HOST: 152.7.176.20
+  ANSIBLE_USER: mdshah5
+  DOCKERHUB_USERNAME: manavshah13
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: self-hosted
+    if: github.event.pull_request.base.ref == 'release/staging' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Ansible
+        run: |
+          pip install ansible
+          pip install ansible-lint
+          ansible-galaxy collection install community.docker
+      
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.ANSIBLE_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Test Ansible connection
+        run: |
+          ansible -i ansible/inventory/staging.ini staging -m ping
+      
+      - name: Deploy to Staging
+        run: |
+          cd ansible
+          ansible-playbook -i inventory/staging.ini playbooks/deploy_staging.yml \
+            -e "image_tag=${{ github.event.inputs.image_tag || 'latest' }}" \
+            -e "dockerhub_username=${{ env.DOCKERHUB_USERNAME }}" \
+            -e "dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}"
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: False
+      
+      - name: Verify deployment
+        run: |
+          echo "## Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "**Services:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081" >> $GITHUB_STEP_SUMMARY
+          echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083" >> $GITHUB_STEP_SUMMARY
+          echo "- Transactions: http://${{ env.ANSIBLE_HOST }}:8082" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Health Checks:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081/actuator/health" >> $GITHUB_STEP_SUMMARY
+          echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083/actuator/health" >> $GITHUB_STEP_SUMMARY
+          echo "- Transactions: http://${{ env.ANSIBLE_HOST }}:8082/actuator/health" >> $GITHUB_STEP_SUMMARY
+
