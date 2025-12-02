@@ -66,8 +66,8 @@ jobs:
         run: |
           cd ansible
 
-          # Use manual input OR use the branch name as image tag
-          IMAGE_TAG="${{ github.event.inputs.image_tag || github.event.workflow_run.head_branch || 'latest' }}"
+          # Use manual input OR default to latest
+          IMAGE_TAG="${{ github.event.inputs.image_tag || 'latest' }}"
 
           ansible-playbook -i inventory/staging.ini playbooks/deploy_staging.yml \
             -e "image_tag=${IMAGE_TAG}" \
