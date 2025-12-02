@@ -185,7 +185,7 @@ services:
   # Frontend
   # =======================
   frontend:
-    image: ghcr.github.ncsu.edu/${GITHUB_REPOSITORY_OWNER}/ecocycle-frontend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:-manavshah13}/ecocycle-frontend:${IMAGE_TAG:-latest}
     container_name: ecocycle-frontend-staging
     restart: unless-stopped
     ports:
