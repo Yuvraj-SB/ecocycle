@@ -51,7 +51,9 @@ jobs:
       - name: Deploy to Staging
         run: |
           cd ansible
-          IMAGE_TAG="${{ github.event.inputs.image_tag || github.ref_name }}"
+          # Use 'latest' tag (CI always tags images as 'latest')
+          # Or use custom tag from workflow_dispatch input
+          IMAGE_TAG="${{ github.event.inputs.image_tag || 'latest' }}"
           ansible-playbook -i inventory/staging.ini playbooks/deploy_staging.yml \
             -e "image_tag=${IMAGE_TAG}" \
             -e "dockerhub_username=${{ env.DOCKERHUB_USERNAME }}" \
