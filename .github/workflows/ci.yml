@@ -366,7 +366,7 @@ jobs:
             type=raw,value=latest
             type=ref,event=branch
             type=ref,event=pr,format=pr-{{number}}
-            type=sha,format=sha-{{sha}}
+            type=sha,format=short,prefix=sha-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
