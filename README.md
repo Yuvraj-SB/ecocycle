@@ -61,6 +61,7 @@ Our solution is that we will design and implement an automated CI/CD pipeline th
 - **[E3]** Health check failure in staging → rollback.  
 - **[E4]** Production health degradation → automatic rollback to last stable release.
 
+
 ---
 
 ## 3. Pipeline Design
