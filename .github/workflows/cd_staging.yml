@@ -51,8 +51,7 @@ jobs:
       - name: Deploy to Staging
         run: |
           cd ansible
-          # Use 'latest' tag (CI always tags images as 'latest')
-          # Or use custom tag from workflow_dispatch input
+          # Use 'latest' tag - CI always tags images as 'latest'
           IMAGE_TAG="${{ github.event.inputs.image_tag || 'latest' }}"
           ansible-playbook -i inventory/staging.ini playbooks/deploy_staging.yml \
             -e "image_tag=${IMAGE_TAG}" \
@@ -67,6 +66,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Deployment completed successfully" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.event.inputs.image_tag || 'latest' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Services:**" >> $GITHUB_STEP_SUMMARY
           echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081" >> $GITHUB_STEP_SUMMARY
           echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083" >> $GITHUB_STEP_SUMMARY

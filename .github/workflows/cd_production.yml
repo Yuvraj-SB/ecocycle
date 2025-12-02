@@ -53,6 +53,7 @@ jobs:
       - name: Deploy to Production
         run: |
           cd ansible
+          # Use 'latest' tag - CI always tags images as 'latest'
           IMAGE_TAG="${{ github.event.inputs.image_tag || 'latest' }}"
           ansible-playbook -i inventory/production.ini playbooks/deploy_production.yml \
             -e "image_tag=${IMAGE_TAG}" \
@@ -69,6 +70,7 @@ jobs:
           echo "✅ Production deployment completed successfully" >> $GITHUB_STEP_SUMMARY
           echo "**Deployed at:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.event.inputs.image_tag || 'latest' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Services:**" >> $GITHUB_STEP_SUMMARY
           echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081" >> $GITHUB_STEP_SUMMARY
