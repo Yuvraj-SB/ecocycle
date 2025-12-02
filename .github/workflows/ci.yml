@@ -19,7 +19,7 @@ env:
   REGISTRY: docker.io
   DOCKERHUB_USERNAME: manavshah13
   IMAGE_PREFIX: manavshah13/ecocycle
-  SERVICES: marketplace-service users-service transactions-service
+  SERVICES: marketplace-service users-service transactions-service frontend
 
 jobs:
   # Job 0: Validation
@@ -40,7 +40,7 @@ jobs:
       - name: Verify service directories exist
         run: |
           echo "Validating project structure..."
-          for service in marketplace-service users-service transactions-service; do
+          for service in marketplace-service users-service transactions-service frontend; do
             if [ ! -d "$service" ]; then
               echo "❌ ERROR: Directory $service not found!"
               exit 1
@@ -317,7 +317,7 @@ jobs:
     
     strategy:
       matrix:
-        service: [marketplace-service, users-service, transactions-service]
+        service: [marketplace-service, users-service, transactions-service, frontend]
     
     steps:
       - name: Clean workspace
