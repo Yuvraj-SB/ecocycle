@@ -1,14 +1,9 @@
 name: CD Pipeline - Production Deployment
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
+  push:
     branches:
       - 'release/production'
-      # Note: Only triggers on push to release/production (after PR merge)
-      # Main branch does NOT trigger production deployment
   workflow_dispatch:
     inputs:
       image_tag:
@@ -28,27 +23,10 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: self-hosted
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && 
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'release/production')
     
     steps:
-      - name: Verify CI passed
-        if: github.event_name == 'workflow_run'
-        run: |
-          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
-            echo "❌ CI Pipeline failed. Production deployment cancelled."
-            exit 1
-          fi
-          echo "✅ CI Pipeline passed. Proceeding with production deployment."
-          echo "✅ Deploying from branch: ${{ github.event.workflow_run.head_branch }}"
-      
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -75,8 +53,7 @@ jobs:
       - name: Deploy to Production
         run: |
           cd ansible
-          # Use branch name as image tag if from workflow_run, otherwise use input
-          IMAGE_TAG="${{ github.event.inputs.image_tag || github.event.workflow_run.head_branch || 'latest' }}"
+          IMAGE_TAG="${{ github.event.inputs.image_tag || github.ref_name }}"
           ansible-playbook -i inventory/production.ini playbooks/deploy_production.yml \
             -e "image_tag=${IMAGE_TAG}" \
             -e "dockerhub_username=${{ env.DOCKERHUB_USERNAME }}" \
@@ -91,6 +68,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Production deployment completed successfully" >> $GITHUB_STEP_SUMMARY
           echo "**Deployed at:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Services:**" >> $GITHUB_STEP_SUMMARY
           echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081" >> $GITHUB_STEP_SUMMARY
@@ -101,4 +79,3 @@ jobs:
           echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081/actuator/health" >> $GITHUB_STEP_SUMMARY
           echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083/actuator/health" >> $GITHUB_STEP_SUMMARY
           echo "- Transactions: http://${{ env.ANSIBLE_HOST }}:8082/actuator/health" >> $GITHUB_STEP_SUMMARY
-

@@ -1,10 +1,7 @@
 name: CD Pipeline - Staging Deployment
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
+  push:
     branches:
       - 'release/staging'
       - 'release/**'
@@ -20,35 +17,14 @@ env:
   ANSIBLE_USER: mdshah5
   DOCKERHUB_USERNAME: manavshah13
 
-permissions:
-  contents: read
-
 jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: self-hosted
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && 
-       github.event.workflow_run.event == 'push' &&
-       (github.event.workflow_run.head_branch == 'release/staging' || 
-        startsWith(github.event.workflow_run.head_branch, 'release/')))
     
     steps:
-      - name: Verify CI passed
-        if: github.event_name == 'workflow_run'
-        run: |
-          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
-            echo "❌ CI Pipeline failed. Deployment cancelled."
-            exit 1
-          fi
-          echo "✅ CI Pipeline passed. Proceeding with deployment."
-          echo "✅ Deploying from branch: ${{ github.event.workflow_run.head_branch }}"
-      
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -75,8 +51,7 @@ jobs:
       - name: Deploy to Staging
         run: |
           cd ansible
-          # Use branch name as image tag if from workflow_run, otherwise use input
-          IMAGE_TAG="${{ github.event.inputs.image_tag || github.event.workflow_run.head_branch || 'latest' }}"
+          IMAGE_TAG="${{ github.event.inputs.image_tag || github.ref_name }}"
           ansible-playbook -i inventory/staging.ini playbooks/deploy_staging.yml \
             -e "image_tag=${IMAGE_TAG}" \
             -e "dockerhub_username=${{ env.DOCKERHUB_USERNAME }}" \
@@ -89,6 +64,7 @@ jobs:
           echo "## Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Deployment completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Services:**" >> $GITHUB_STEP_SUMMARY
           echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081" >> $GITHUB_STEP_SUMMARY
           echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083" >> $GITHUB_STEP_SUMMARY
@@ -98,4 +74,3 @@ jobs:
           echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081/actuator/health" >> $GITHUB_STEP_SUMMARY
           echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083/actuator/health" >> $GITHUB_STEP_SUMMARY
           echo "- Transactions: http://${{ env.ANSIBLE_HOST }}:8082/actuator/health" >> $GITHUB_STEP_SUMMARY
-
