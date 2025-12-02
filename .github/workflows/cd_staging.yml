@@ -20,22 +20,21 @@ env:
   ANSIBLE_USER: mdshah5
   DOCKERHUB_USERNAME: manavshah13
 
+permissions:
+  contents: read
+
 jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: self-hosted
     if: |
+      github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && 
-       (contains(github.event.workflow_run.head_branch, 'release/staging') || 
-        contains(github.event.workflow_run.head_branch, 'release/'))) ||
-      github.event_name == 'workflow_dispatch'
+       github.event.workflow_run.event == 'push' &&
+       (github.event.workflow_run.head_branch == 'release/staging' || 
+        startsWith(github.event.workflow_run.head_branch, 'release/')))
     
     steps:
-      - name: Checkout code from PR
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
-      
       - name: Verify CI passed
         if: github.event_name == 'workflow_run'
         run: |
@@ -44,6 +43,12 @@ jobs:
             exit 1
           fi
           echo "✅ CI Pipeline passed. Proceeding with deployment."
+          echo "✅ Deploying from branch: ${{ github.event.workflow_run.head_branch }}"
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
       
       - name: Set up Python
         uses: actions/setup-python@v4

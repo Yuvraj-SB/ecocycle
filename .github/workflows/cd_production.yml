@@ -7,9 +7,8 @@ on:
       - completed
     branches:
       - 'release/production'
-      # Note: Main branch does NOT trigger production deployment
-      # Production deployments come from release/production only
-      # Main is updated AFTER successful production deployment
+      # Note: Only triggers on push to release/production (after PR merge)
+      # Main branch does NOT trigger production deployment
   workflow_dispatch:
     inputs:
       image_tag:
@@ -30,16 +29,12 @@ jobs:
     name: Deploy to Production
     runs-on: self-hosted
     if: |
+      github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && 
-       github.event.workflow_run.head_branch == 'release/production') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.confirm_production == 'yes')
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'release/production')
     
     steps:
-      - name: Checkout code from PR
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
-      
       - name: Verify CI passed
         if: github.event_name == 'workflow_run'
         run: |
@@ -48,6 +43,12 @@ jobs:
             exit 1
           fi
           echo "✅ CI Pipeline passed. Proceeding with production deployment."
+          echo "✅ Deploying from branch: ${{ github.event.workflow_run.head_branch }}"
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
