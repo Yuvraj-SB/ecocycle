@@ -26,7 +26,6 @@ jobs:
   validate:
     name: Validate Project Structure
     runs-on: self-hosted
-    if: false  # SKIPPED - Skip until job 5
     
     steps:
       - name: Clean workspace
@@ -55,7 +54,6 @@ jobs:
     name: Code Quality & Linting
     runs-on: self-hosted
     needs: validate
-    if: false  # SKIPPED - Skip until job 5
     
     steps:
       - name: Clean workspace
@@ -107,7 +105,6 @@ jobs:
     name: Unit Tests & Coverage
     runs-on: self-hosted
     needs: [validate, code-quality]
-    if: false  # SKIPPED - Skip until job 5
     
     steps:
       - name: Clean workspace
@@ -185,7 +182,6 @@ jobs:
     name: Static Analysis
     runs-on: self-hosted
     needs: [validate, code-quality]
-    if: false  # SKIPPED - Skip until job 5
     
     steps:
       - name: Clean workspace
@@ -236,7 +232,6 @@ jobs:
     name: Security Scanning
     runs-on: self-hosted
     needs: [validate, code-quality]
-    if: false  # SKIPPED - Skip until job 5
     
     steps:
       - name: Clean workspace
@@ -327,7 +322,7 @@ jobs:
   build-images:
     name: Build & Push Docker Images
     runs-on: self-hosted
-    # needs: [test, static-analysis, security-scan]  # DISABLED - Skipping jobs 1-4
+    needs: [test, static-analysis, security-scan]
     # Build images on:
     # - Push to any branch (for development/testing)
     # - PR to release/* branches (for CD pipeline deployment)
@@ -436,7 +431,6 @@ jobs:
     name: Integration Tests
     runs-on: self-hosted
     needs: build-images
-    # Note: Jobs 1-4 are skipped, so this only depends on build-images
     # Run integration tests on push OR on PR to release branches
     if: |
       github.event_name == 'push' ||
@@ -489,7 +483,7 @@ jobs:
   build-summary:
     name: Build Summary
     runs-on: self-hosted
-    needs: [build-images]  # Only depend on build-images since jobs 1-4 are skipped
+    needs: [validate, code-quality, test, static-analysis, security-scan, build-images]
     if: always()
     
     steps:
@@ -503,8 +497,10 @@ jobs:
         run: |
           echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⚠️ **Note:** Jobs 1-4 (Validation, Code Quality, Tests, Static Analysis, Security Scan) are skipped" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Build Images: ${{ needs.build-images.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
