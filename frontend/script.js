@@ -25,7 +25,7 @@ function register() {
         return;
     }
 
-    fetch("http://localhost:8083/auth/register?email=" + encodeURIComponent(email) + 
+    fetch("/auth/register?email=" + encodeURIComponent(email) + 
           "&username=" + encodeURIComponent(username), {
         method: "POST"
     })
@@ -58,7 +58,7 @@ function login() {
         return;
     }
 
-    fetch("http://localhost:8083/auth/login?email=" + encodeURIComponent(email), {
+    fetch("/auth/login?email=" + encodeURIComponent(email), {
         method: "POST"
     })
     .then(res => {
@@ -95,9 +95,9 @@ function callService(service) {
     
     let url = "";
 
-    if (service === "users") url = "http://localhost:8083/users";
-    if (service === "marketplace") url = "http://localhost:8081/listings";
-    if (service === "transactions") url = "http://localhost:8082/transactions";
+    if (service === "users") url = "/users";
+    if (service === "marketplace") url = "/listings";
+    if (service === "transactions") url = "/transactions";
 
     if (!url) {
         document.getElementById("result").textContent = "Error: Unknown service";
