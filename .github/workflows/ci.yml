@@ -256,19 +256,19 @@ jobs:
       - name: Run OWASP Dependency Check on Marketplace
         run: |
           cd marketplace-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || echo "OWASP scan completed with warnings (NVD API may be unavailable)"
         continue-on-error: true
 
       - name: Run OWASP Dependency Check on Users
         run: |
           cd users-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || echo "OWASP scan completed with warnings (NVD API may be unavailable)"
         continue-on-error: true
 
       - name: Run OWASP Dependency Check on Transactions
         run: |
           cd transactions-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || echo "OWASP scan completed with warnings (NVD API may be unavailable)"
         continue-on-error: true
 
       - name: Fix file permissions for reports
@@ -294,11 +294,54 @@ jobs:
           # Clean up Docker-created files for next run
           sudo rm -rf ${{ github.workspace }}/*/target || true
 
+  # Job 4.5: CodeQL Security Analysis
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: self-hosted
+    needs: [validate, code-quality]
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['java']
+    
+    steps:
+      - name: Clean workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+          sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+      
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
+      
+      - name: Cleanup target directories
+        if: always()
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*/target || true
+
   # Job 5: Build Docker Images
   build-images:
     name: Build & Push Docker Images
     runs-on: self-hosted
-    needs: [test, static-analysis, security-scan]
+    needs: [test, static-analysis, security-scan, codeql-analysis]
     # Build images on:
     # - Push to any branch (for development/testing)
     # - PR to release/* branches (for CD pipeline deployment)
@@ -390,7 +433,8 @@ jobs:
           image-ref: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}:${{ github.ref_name }}
           format: 'table'
           output: 'trivy-results-${{ matrix.service }}.txt'
-        continue-on-error: true
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy results as artifact
         uses: actions/upload-artifact@v3
@@ -458,7 +502,7 @@ jobs:
   build-summary:
     name: Build Summary
     runs-on: self-hosted
-    needs: [validate, code-quality, test, static-analysis, security-scan, build-images]
+    needs: [validate, code-quality, test, static-analysis, security-scan, codeql-analysis, build-images]
     if: always()
     
     steps:
@@ -476,6 +520,7 @@ jobs:
           echo "✅ Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ CodeQL Analysis: ${{ needs.codeql-analysis.result }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Build Images: ${{ needs.build-images.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
