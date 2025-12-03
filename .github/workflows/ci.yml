@@ -388,15 +388,17 @@ jobs:
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}:${{ github.ref_name }}
-          format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}.sarif'
+          format: 'table'
+          output: 'trivy-results-${{ matrix.service }}.txt'
         continue-on-error: true
 
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Upload Trivy results as artifact
+        uses: actions/upload-artifact@v3
         if: always()
         with:
-          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          name: trivy-scan-${{ matrix.service }}
+          path: trivy-results-${{ matrix.service }}.txt
+          retention-days: 7
         continue-on-error: true
 
   # Job 6: Integration Tests (Optional - for bonus)
