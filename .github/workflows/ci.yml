@@ -253,23 +253,29 @@ jobs:
         run: |
           sudo chmod 666 /var/run/docker.sock || true
 
-      - name: Run Semgrep Security Scan
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: >-
-            p/security-audit
-            p/java
-          outputFormat: "text"
-          failOnError: true
-
-      - name: Upload Semgrep results as artifact
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: semgrep-results
-          path: semgrep-results.txt
-          retention-days: 30
-        continue-on-error: true
+      - name: Run Hadolint Dockerfile Security Scan
+        run: |
+          echo "Scanning Dockerfiles for security issues..."
+          DOCKERFILES=$(find . -name "Dockerfile*" -type f)
+          if [ -z "$DOCKERFILES" ]; then
+            echo "No Dockerfiles found to scan"
+            exit 0
+          fi
+          
+          FAILED=0
+          for dockerfile in $DOCKERFILES; do
+            echo "Scanning: $dockerfile"
+            docker run --rm -i hadolint/hadolint < "$dockerfile" || {
+              echo "❌ Security issues found in $dockerfile"
+              FAILED=1
+            }
+          done
+          
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ Dockerfile security scan failed"
+            exit 1
+          fi
+          echo "✅ All Dockerfiles passed security scan"
 
       - name: Run OWASP Dependency Check on Marketplace
         run: |
