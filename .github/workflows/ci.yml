@@ -409,13 +409,16 @@ jobs:
             VERSION=${{ github.ref_name }}
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}:latest
           format: 'table'
           output: 'trivy-results-${{ matrix.service }}.txt'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
+          scanners: 'vuln'
+          timeout: '10m'
+          vuln-type: 'os,library'
 
       - name: Upload Trivy results as artifact
         uses: actions/upload-artifact@v3
