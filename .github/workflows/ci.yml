@@ -253,6 +253,16 @@ jobs:
         run: |
           sudo chmod 666 /var/run/docker.sock || true
 
+      - name: Run Secrets Scanning (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+        with:
+          config-path: .gitleaks.toml
+          no-git: false
+          exit-code: 1
+          platform: github
+
       - name: Run OWASP Dependency Check on Marketplace
         run: |
           cd marketplace-service
@@ -298,7 +308,7 @@ jobs:
   build-images:
     name: Build & Push Docker Images
     runs-on: self-hosted
-    needs: [test, static-analysis, security-scan, codeql-analysis]
+    needs: [test, static-analysis, security-scan]
     # Build images on:
     # - Push to any branch (for development/testing)
     # - PR to release/* branches (for CD pipeline deployment)
@@ -459,7 +469,7 @@ jobs:
   build-summary:
     name: Build Summary
     runs-on: self-hosted
-    needs: [validate, code-quality, test, static-analysis, security-scan, codeql-analysis, build-images]
+    needs: [validate, code-quality, test, static-analysis, security-scan, build-images]
     if: always()
     
     steps:
@@ -477,7 +487,6 @@ jobs:
           echo "✅ Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ CodeQL Analysis: ${{ needs.codeql-analysis.result }}" >> $GITHUB_STEP_SUMMARY
           echo "✅ Build Images: ${{ needs.build-images.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

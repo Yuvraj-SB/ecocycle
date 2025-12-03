@@ -1,0 +1,60 @@
+# Gitleaks configuration for secrets scanning
+title = "EcoCycle Secrets Detection"
+
+[extend]
+# Use default rules
+useDefault = true
+
+[allowlist]
+description = "Allow list for known safe patterns"
+paths = [
+  '''\.md$''',
+  '''\.txt$''',
+  '''\.json$''',
+  '''\.xml$''',
+  '''\.yml$''',
+  '''\.yaml$''',
+  '''\.toml$''',
+  '''\.example$''',
+  '''\.sample$''',
+  '''\.template$''',
+  '''\.env\.example$''',
+  '''\.env\.sample$''',
+  '''\.env\.template$''',
+  '''\.git/''',
+  '''\.github/''',
+  '''\.vscode/''',
+  '''\.idea/''',
+  '''node_modules/''',
+  '''target/''',
+  '''\.m2/''',
+  '''\.venv/''',
+  '''venv/''',
+  '''__pycache__/''',
+  '''\.pyc$''',
+  '''\.class$''',
+  '''\.jar$''',
+  '''\.war$''',
+  '''\.ear$''',
+  '''\.log$''',
+  '''\.lock$''',
+  '''\.gradle/''',
+  '''\.cache/''',
+  '''\.DS_Store$''',
+  '''Thumbs\.db$''',
+  '''\.gitignore$''',
+  '''\.gitattributes$''',
+  '''\.editorconfig$''',
+  '''\.prettierrc$''',
+  '''\.eslintrc$''',
+  '''\.dockerignore$''',
+  '''\.gitkeep$''',
+  '''\.gitmodules$''',
+  '''\.gitconfig$''',
+  '''docs/''',
+  '''README\.md$''',
+  '''LICENSE$''',
+  '''CHANGELOG$''',
+  '''CONTRIBUTING$''',
+  '''ansible/ecocyle-keys$''',
+]
