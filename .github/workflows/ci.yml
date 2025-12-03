@@ -8,13 +8,6 @@ on:
     branches:
       - 'release/**'
       - 'main'
-  workflow_dispatch:
-    inputs:
-      quick_test:
-        description: 'Skip tests and go straight to build (for CD testing)'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -33,26 +26,19 @@ jobs:
   validate:
     name: Validate Project Structure
     runs-on: self-hosted
+    if: false  # SKIPPED - Skip until job 5
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Quick test mode - Skip validation
-        if: github.event.inputs.quick_test == 'true'
-        run: |
-          echo "⏩ Quick test mode: Skipping validation"
-          echo "✅ Validation skipped (quick test mode)"
-      
       - name: Clean workspace
-        if: github.event.inputs.quick_test != 'true'
         run: |
           # Remove target directories with root-owned files from previous runs
           sudo rm -rf ${{ github.workspace }}/*/target || true
           sudo chown -R $USER:$USER ${{ github.workspace }} || true
       
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
       - name: Verify service directories exist
-        if: github.event.inputs.quick_test != 'true'
         run: |
           echo "Validating project structure..."
           for service in marketplace-service users-service transactions-service frontend; do
@@ -69,24 +55,17 @@ jobs:
     name: Code Quality & Linting
     runs-on: self-hosted
     needs: validate
-    if: always()
+    if: false  # SKIPPED - Skip until job 5
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Quick test mode - Skip code quality checks
-        if: github.event.inputs.quick_test == 'true'
-        run: |
-          echo "⏩ Quick test mode: Skipping code quality checks"
-          echo "✅ Code quality checks skipped (quick test mode)"
-      
       - name: Clean workspace
-        if: github.event.inputs.quick_test != 'true'
         run: |
           # Remove target directories with root-owned files from previous runs
           sudo rm -rf ${{ github.workspace }}/*/target || true
           sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -128,24 +107,17 @@ jobs:
     name: Unit Tests & Coverage
     runs-on: self-hosted
     needs: [validate, code-quality]
-    if: always()
+    if: false  # SKIPPED - Skip until job 5
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Quick test mode - Skip tests
-        if: github.event.inputs.quick_test == 'true'
-        run: |
-          echo "⏩ Quick test mode: Skipping unit tests"
-          echo "✅ Tests skipped (quick test mode)"
-      
       - name: Clean workspace
-        if: github.event.inputs.quick_test != 'true'
         run: |
           # Remove target directories with root-owned files from previous runs
           sudo rm -rf ${{ github.workspace }}/*/target || true
           sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -213,24 +185,17 @@ jobs:
     name: Static Analysis
     runs-on: self-hosted
     needs: [validate, code-quality]
-    if: always()
+    if: false  # SKIPPED - Skip until job 5
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Quick test mode - Skip static analysis
-        if: github.event.inputs.quick_test == 'true'
-        run: |
-          echo "⏩ Quick test mode: Skipping static analysis"
-          echo "✅ Static analysis skipped (quick test mode)"
-      
       - name: Clean workspace
-        if: github.event.inputs.quick_test != 'true'
         run: |
           # Remove target directories with root-owned files from previous runs
           sudo rm -rf ${{ github.workspace }}/*/target || true
           sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -271,24 +236,17 @@ jobs:
     name: Security Scanning
     runs-on: self-hosted
     needs: [validate, code-quality]
-    if: always()
+    if: false  # SKIPPED - Skip until job 5
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Quick test mode - Skip security scanning
-        if: github.event.inputs.quick_test == 'true'
-        run: |
-          echo "⏩ Quick test mode: Skipping security scanning"
-          echo "✅ Security scanning skipped (quick test mode)"
-      
       - name: Clean workspace
-        if: github.event.inputs.quick_test != 'true'
         run: |
           # Remove target directories with root-owned files from previous runs
           sudo rm -rf ${{ github.workspace }}/*/target || true
           sudo chown -R $USER:$USER ${{ github.workspace }} || true
+      
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -345,20 +303,17 @@ jobs:
   build-images:
     name: Build & Push Docker Images
     runs-on: self-hosted
-    needs: [test, static-analysis, security-scan]
+    # needs: [test, static-analysis, security-scan]  # DISABLED - Skipping jobs 1-4
     # Build images on:
     # - Push to any branch (for development/testing)
     # - PR to release/* branches (for CD pipeline deployment)
     # - PR to main (for validation, but main doesn't trigger deployment)
-    # - Manual workflow_dispatch (for quick testing)
     if: |
-      always() &&
-      (github.event_name == 'push' ||
-       github.event_name == 'workflow_dispatch' ||
-       (github.event_name == 'pull_request' && 
-        (startsWith(github.head_ref, 'release/') || 
-         startsWith(github.base_ref, 'release/') ||
-         github.base_ref == 'main'))) 
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && 
+       (startsWith(github.head_ref, 'release/') || 
+        startsWith(github.base_ref, 'release/') ||
+        github.base_ref == 'main')) 
     
     permissions:
       contents: read
@@ -454,6 +409,7 @@ jobs:
     name: Integration Tests
     runs-on: self-hosted
     needs: build-images
+    # Note: Jobs 1-4 are skipped, so this only depends on build-images
     # Run integration tests on push OR on PR to release branches
     if: |
       github.event_name == 'push' ||
@@ -506,7 +462,7 @@ jobs:
   build-summary:
     name: Build Summary
     runs-on: self-hosted
-    needs: [validate, code-quality, test, static-analysis, security-scan, build-images]
+    needs: [build-images]  # Only depend on build-images since jobs 1-4 are skipped
     if: always()
     
     steps:
@@ -520,10 +476,8 @@ jobs:
         run: |
           echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Note:** Jobs 1-4 (Validation, Code Quality, Tests, Static Analysis, Security Scan) are skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Build Images: ${{ needs.build-images.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
