@@ -21,7 +21,7 @@
 
 - name: Check frontend health
   uri:
-    url: "http://{{ ansible_host }}:{{ frontend_port }}/health"
+    url: "http://{{ ansible_host }}:{{ frontend_port | default(80) }}/health"
     method: GET
     status_code: 200
     timeout: "{{ health_check_timeout }}"
@@ -40,11 +40,11 @@
 
 - name: Display frontend health check result
   debug:
-    msg: "Frontend: {{ 'HEALTHY' if frontend_health.status == 200 else 'UNHEALTHY' }}"
+    msg: "Frontend: {{ 'HEALTHY' if (frontend_health is defined and frontend_health.status == 200) else 'UNHEALTHY' }}"
 
 - name: Check if all services are healthy
   set_fact:
-    all_healthy: "{{ (health_results.results | map(attribute='status') | list | select('equalto', 200) | list | length == 3) and (frontend_health.status == 200) }}"
+    all_healthy: "{{ (health_results.results | map(attribute='status') | list | select('equalto', 200) | list | length == 3) and (frontend_health is defined and frontend_health.status == 200) }}"
 
 - name: Fail if any service is unhealthy
   fail:
