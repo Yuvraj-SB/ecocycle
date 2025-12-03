@@ -97,7 +97,15 @@ function callService(service) {
 
     if (service === "users") url = "/users";
     if (service === "marketplace") url = "/listings";
-    if (service === "transactions") url = "/transactions";
+    if (service === "transactions") {
+        // For transactions, we need a transaction ID
+        const transactionId = prompt("Enter Transaction ID:");
+        if (!transactionId || transactionId.trim() === "") {
+            document.getElementById("result").textContent = "Error: Transaction ID is required";
+            return;
+        }
+        url = "/transactions/" + transactionId.trim();
+    }
 
     if (!url) {
         document.getElementById("result").textContent = "Error: Unknown service";
@@ -111,7 +119,9 @@ function callService(service) {
     })
     .then(res => {
         if (!res.ok) {
-            throw new Error("HTTP " + res.status);
+            return res.text().then(text => {
+                throw new Error(text || "HTTP " + res.status);
+            });
         }
         return res.json();
     })
