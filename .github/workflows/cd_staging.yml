@@ -1,16 +1,12 @@
 name: CD Pipeline - Staging Deployment
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI Pipeline"]   # Must match name: CI Pipeline
+    types:
+      - completed
     branches:
       - 'release/staging'
-      - 'release/**'
-  workflow_dispatch:
-    inputs:
-      image_tag:
-        description: 'Docker image tag to deploy'
-        required: false
-        default: 'latest'
 
 env:
   ANSIBLE_HOST: 152.7.176.20
@@ -21,11 +17,18 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: self-hosted
-    
+
+    # Only run if CI Pipeline succeeded
+    if: |
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -51,8 +54,15 @@ jobs:
       - name: Deploy to Staging
         run: |
           cd ansible
-          # Use 'latest' tag - CI always tags images as 'latest'
-          IMAGE_TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+          
+          # Use 'latest' tag which is built by CI pipeline
+          # CI builds and pushes 'latest' tag on every push to release/staging
+          IMAGE_TAG="latest"
+          
+          echo "📦 Deploying Docker images with tag: ${IMAGE_TAG}"
+          echo "🌿 Triggered by branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "🔨 Built from commit: ${{ github.event.workflow_run.head_sha }}"
+          
           ansible-playbook -i inventory/staging.ini playbooks/deploy_staging.yml \
             -e "image_tag=${IMAGE_TAG}" \
             -e "dockerhub_username=${{ env.DOCKERHUB_USERNAME }}" \
@@ -65,15 +75,9 @@ jobs:
           echo "## Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Deployment completed successfully" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Tag:** ${{ github.event.inputs.image_tag || 'latest' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.workflow_run.head_branch || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Services:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: http://${{ env.ANSIBLE_HOST }}" >> $GITHUB_STEP_SUMMARY
           echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081" >> $GITHUB_STEP_SUMMARY
           echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083" >> $GITHUB_STEP_SUMMARY
           echo "- Transactions: http://${{ env.ANSIBLE_HOST }}:8082" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Health Checks:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Marketplace: http://${{ env.ANSIBLE_HOST }}:8081/actuator/health" >> $GITHUB_STEP_SUMMARY
-          echo "- Users: http://${{ env.ANSIBLE_HOST }}:8083/actuator/health" >> $GITHUB_STEP_SUMMARY
-          echo "- Transactions: http://${{ env.ANSIBLE_HOST }}:8082/actuator/health" >> $GITHUB_STEP_SUMMARY
