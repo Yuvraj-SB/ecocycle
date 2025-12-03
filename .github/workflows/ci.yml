@@ -409,6 +409,7 @@ jobs:
             VERSION=${{ github.ref_name }}
 
       - name: Run Trivy vulnerability scanner
+        if: matrix.service != 'frontend'
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}:latest
@@ -418,8 +419,8 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy results as artifact
+        if: matrix.service != 'frontend'
         uses: actions/upload-artifact@v3
-        if: always()
         with:
           name: trivy-scan-${{ matrix.service }}
           path: trivy-results-${{ matrix.service }}.txt
