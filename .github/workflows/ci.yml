@@ -258,22 +258,46 @@ jobs:
         run: |
           sudo chmod 666 /var/run/docker.sock || true
 
+      - name: Run Hadolint Dockerfile Security Scan
+        run: |
+          echo "Scanning Dockerfiles for security issues..."
+          DOCKERFILES=$(find . -name "Dockerfile*" -type f)
+          if [ -z "$DOCKERFILES" ]; then
+            echo "No Dockerfiles found to scan"
+            exit 0
+          fi
+          
+          FAILED=0
+          for dockerfile in $DOCKERFILES; do
+            echo "Scanning: $dockerfile"
+            docker run --rm -i hadolint/hadolint < "$dockerfile" || {
+              echo "❌ Security issues found in $dockerfile"
+              FAILED=1
+            }
+          done
+          
+          if [ $FAILED -eq 1 ]; then
+            echo "❌ Dockerfile security scan failed"
+            exit 1
+          fi
+          echo "✅ All Dockerfiles passed security scan"
+
       - name: Run OWASP Dependency Check on Marketplace
         run: |
           cd marketplace-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || echo "OWASP scan completed with warnings (NVD API may be unavailable)"
         continue-on-error: true
 
       - name: Run OWASP Dependency Check on Users
         run: |
           cd users-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || echo "OWASP scan completed with warnings (NVD API may be unavailable)"
         continue-on-error: true
 
       - name: Run OWASP Dependency Check on Transactions
         run: |
           cd transactions-service
-          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || true
+          docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9.6-eclipse-temurin-17 mvn dependency-check:check || echo "OWASP scan completed with warnings (NVD API may be unavailable)"
         continue-on-error: true
 
       - name: Fix file permissions for reports
@@ -393,15 +417,18 @@ jobs:
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: ${{ env.DOCKERHUB_USERNAME }}/ecocycle-${{ matrix.service }}:${{ github.ref_name }}
-          format: 'sarif'
-          output: 'trivy-results-${{ matrix.service }}.sarif'
-        continue-on-error: true
+          format: 'table'
+          output: 'trivy-results-${{ matrix.service }}.txt'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
 
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Upload Trivy results as artifact
+        uses: actions/upload-artifact@v3
         if: always()
         with:
-          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          name: trivy-scan-${{ matrix.service }}
+          path: trivy-results-${{ matrix.service }}.txt
+          retention-days: 7
         continue-on-error: true
 
   # Job 6: Integration Tests (Optional - for bonus)
