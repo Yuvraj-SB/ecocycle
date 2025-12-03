@@ -253,44 +253,23 @@ jobs:
         run: |
           sudo chmod 666 /var/run/docker.sock || true
 
-      - name: Install gitleaks
-        run: |
-          # Check if gitleaks is already installed
-          if command -v gitleaks &> /dev/null; then
-            echo "gitleaks is already installed"
-            gitleaks version
-            exit 0
-          fi
-          
-          # Detect OS and architecture
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-          ARCH=$(uname -m)
-          if [ "$ARCH" = "x86_64" ]; then
-            ARCH="amd64"
-          elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
-            ARCH="arm64"
-          fi
-          
-          # Download gitleaks binary
-          GITLEAKS_VERSION="8.18.0"
-          echo "Installing gitleaks v${GITLEAKS_VERSION} for ${OS}_${ARCH}"
-          curl -L "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${OS}_${ARCH}.tar.gz" -o /tmp/gitleaks.tar.gz
-          tar -xzf /tmp/gitleaks.tar.gz -C /tmp
-          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks || mv /tmp/gitleaks ~/bin/gitleaks || mkdir -p ~/bin && mv /tmp/gitleaks ~/bin/gitleaks
-          sudo chmod +x /usr/local/bin/gitleaks 2>/dev/null || chmod +x ~/bin/gitleaks
-          export PATH="$HOME/bin:$PATH"
-          gitleaks version
+      - name: Run Semgrep Security Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/java
+          outputFormat: "text"
+          failOnError: true
 
-      - name: Run Secrets Scanning (gitleaks)
-        run: |
-          cd ${{ github.workspace }}
-          export PATH="$HOME/bin:/usr/local/bin:$PATH"
-          gitleaks detect \
-            --source=. \
-            --config=.gitleaks.toml \
-            --platform=github \
-            --exit-code=1 \
-            --verbose
+      - name: Upload Semgrep results as artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: semgrep-results
+          path: semgrep-results.txt
+          retention-days: 30
+        continue-on-error: true
 
       - name: Run OWASP Dependency Check on Marketplace
         run: |
