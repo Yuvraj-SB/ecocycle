@@ -417,6 +417,9 @@ jobs:
           output: 'trivy-results-${{ matrix.service }}.txt'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
+          scanners: 'vuln'
+          timeout: '10m'
+          vuln-type: 'os,library'
 
       - name: Upload Trivy results as artifact
         if: matrix.service != 'frontend'
