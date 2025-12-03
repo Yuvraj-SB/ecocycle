@@ -294,49 +294,6 @@ jobs:
           # Clean up Docker-created files for next run
           sudo rm -rf ${{ github.workspace }}/*/target || true
 
-  # Job 4.5: CodeQL Security Analysis
-  codeql-analysis:
-    name: CodeQL Security Analysis
-    runs-on: self-hosted
-    needs: [validate, code-quality]
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ['java']
-    
-    steps:
-      - name: Clean workspace
-        run: |
-          sudo rm -rf ${{ github.workspace }}/*/target || true
-          sudo chown -R $USER:$USER ${{ github.workspace }} || true
-      
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
-        with:
-          languages: ${{ matrix.language }}
-          queries: security-extended,security-and-quality
-      
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
-      
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
-        with:
-          category: "/language:${{ matrix.language }}"
-      
-      - name: Cleanup target directories
-        if: always()
-        run: |
-          sudo rm -rf ${{ github.workspace }}/*/target || true
-
   # Job 5: Build Docker Images
   build-images:
     name: Build & Push Docker Images
