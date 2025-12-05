@@ -77,57 +77,15 @@ graph LR
 
 ### 3.2 CI Pipeline Details
 
-**Smart Triggering Strategy**: 
-- **Pull Requests**: Validates on PRs to `main/release/develop` before merge
-- **Push Events**: Only on protected branches (`main`, `release/staging`, `release/production`)
-- **Benefit**: Avoids redundant CI runs on feature branches while ensuring all code is validated
+**Triggers**: PRs to `main/release/develop`; pushes to `main/release/staging/release/production`
 
-**Pipeline Stages** (Sequential execution, each must pass before proceeding):
-
-**Stage 1 - Validation & Caching**
-- Verifies project structure and all service directories exist
-- Cleans workspace with `sudo chown` to fix Docker-created root files on self-hosted runner
-- **Maven Cache**: GitHub Actions cache for `~/.m2` directory
-  - Cache key: `${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}`
-  - **Impact**: Reduces build time from ~8 minutes to ~90 seconds (80% improvement)
-
-**Stage 2 - Code Quality (Checkstyle)**
-- Enforces Google Java Style Guide across all microservices
-- Runs in Docker containers for consistency (`maven:3.9.6-eclipse-temurin-17`)
-- Configuration: `failsOnError: true` blocks builds on style violations
-- Uploads reports as artifacts
-
-**Stage 3 - Testing (JUnit + JaCoCo)**
-- Executes JUnit 5 unit tests for all services
-- JaCoCo generates coverage reports with 50% minimum threshold
-- Uploads to Codecov for trend tracking
-- Fails pipeline if coverage drops below threshold
-
-**Stage 4 - Static Analysis (SpotBugs)**
-- Analyzes compiled bytecode for 400+ bug patterns
-- Detects: Null pointer dereferences, resource leaks, concurrency issues
-- Maximum effort, low threshold for comprehensive analysis
-- `continue-on-error: true` allows review without blocking
-
-**Stage 5 - Security Scanning (Multi-Layer)**
-Three parallel security scans via matrix strategy:
-- **Hadolint**: Dockerfile security linting, checks root user, unpinned versions, exposed secrets
-- **OWASP**: Scans dependencies against NVD, fails on CVSS ≥ 7, generates CVE reports
-- **Trivy**: Scans Docker images for OS/library vulnerabilities, detects CRITICAL/HIGH issues
-- All results uploaded as artifacts for audit trail
-
-**Stage 6 - Build & Push**
-- **Matrix Strategy**: Parallel builds for all 4 services
-- **Multi-Stage Dockerfiles**: Builder (Maven + source) → Runtime (JRE only)
-- **Automated Tagging**: `latest` (main), `pr-<number>` (PRs), `sha-<commit>` (traceability)
-- Push to Docker Hub: `manavshah13/ecocycle-*`
-- Docker Buildx with layer caching for faster rebuilds
-
-**Stage 7 - Build Summary**
-- Aggregates all stage results (quality, tests, security, builds)
-- Generates GitHub Actions summary with pass/fail status
-- **Decision Point**: If `release/**` branch + all gates passed → Triggers CD
-- Fails pipeline if any critical stage failed
+**Stage 1 - Validation**: Project structure verification, Maven cache (80% faster builds)  
+**Stage 2 - Code Quality**: Checkstyle enforces Google Java Style Guide  
+**Stage 3 - Testing**: JUnit + JaCoCo (50% minimum coverage)  
+**Stage 4 - Static Analysis**: SpotBugs detects bug patterns  
+**Stage 5 - Security Scanning**: OWASP (CVE detection) + Hadolint (Dockerfile) + Trivy (image vulnerabilities)  
+**Stage 6 - Build**: Multi-stage Docker builds, push to Docker Hub with tags (latest, pr-#, sha-)  
+**Stage 7 - Summary**: Aggregate results, fail if critical issues found
 
 ### 3.3 CD Pipeline & Ansible
 
@@ -150,63 +108,14 @@ graph TB
     style H fill:#fff3cd
 ```
 
-**CD Staging Pipeline** (Auto-triggered on `release/**` branches after CI success):
+**CD Workflow**: SSH setup (600 perms) → Ansible ping → Deploy playbook → Health checks → Success/Rollback
 
-**Step 1 - Environment Setup**
-- Checks out code from successful CI run (same commit SHA)
-- Installs Python 3.11, Ansible, and `community.docker` collection
-- Exports variables: `ANSIBLE_HOST`, `IMAGE_TAG`, `DOCKERHUB_USERNAME`
+**Ansible Roles**:
+- **common**: Install Docker, configure UFW firewall (production), create directories, setup log rotation
+- **deploy**: Docker Hub login, template docker-compose, pull images, deploy with compose v2
+- **healthcheck**: Verify `/actuator/health` endpoints, retry 10-15 times, fail deployment if unhealthy
 
-**Step 2 - SSH Configuration**
-- Creates `~/.ssh` directory, retrieves key from `ANSIBLE_SSH_PRIVATE_KEY` secret
-- Sets `chmod 600` permissions (owner read/write only)
-- Runs `ssh-keyscan` to add host to `known_hosts` (prevents MITM attacks)
-
-**Step 3 - Connectivity Test**
-- Executes `ansible staging -m ping` to verify VM reachability
-- **Fail Fast**: Stops immediately if VM unreachable
-
-**Step 4 - Ansible Deployment**
-- Runs `ansible-playbook deploy_staging.yml` with variables (image tag, credentials)
-- Executes three roles sequentially (details below)
-- Ansible Vault password from GitHub Secrets decrypts sensitive data
-
-**Step 5 - Verification**
-- Generates deployment summary with service URLs, health endpoints, timestamp
-- Uploads logs as artifacts for troubleshooting
-
-**CD Production Pipeline** (Manual trigger on `release/production` or workflow dispatch):
-- **Additional Safeguards**: Manual approval step, explicit image tag (no `latest`)
-- **Smoke Tests**: Post-deployment end-to-end tests
-- **Production Config**: Resource limits (1 CPU, 1024MB), UFW firewall, stricter health checks (15 retries vs 10)
-
-**Ansible Role Architecture**:
-
-**Role: common** (Infrastructure Provisioning)
-- System updates, Docker CE installation, Docker Compose v2 plugin
-- User management: Add deploy user to `docker` group
-- Directory structure: `/opt/ecocycle/{staging|production}/{app,logs,backups}`
-- **UFW Firewall** (Production only): Allow SSH (22) + app ports, deny all others
-- Log rotation: 7-day staging, 30-day production
-- Template `.env` file with database credentials (0600 permissions)
-
-**Role: deploy** (Application Deployment)
-- Docker Hub login with `no_log: true` (prevents credential leakage)
-- Jinja2 template `docker-compose.{{ env_name }}.yml` with variables (ports, passwords, resource limits)
-- Remove conflicting containers, pull images with `always` policy
-- `docker compose up -d` with recreate policy
-- Save current tags to `.previous_tags` for rollback capability
-
-**Role: healthcheck** (Service Verification)
-- HTTP checks: Marketplace `:8081/actuator/health`, Transactions `:8082`, Users `:8083`, Frontend `:80/health`
-- Retry logic: 10 retries/10s staging | 15 retries/15s production
-- Validates JSON response: `{"status": "UP"}`
-- Fails deployment if any service unhealthy, logs error details
-
-**Rollback Mechanism**:
-- Manual trigger: `ansible-playbook rollback.yml -e "env_name=staging"`
-- Process: Confirmation → Read `.previous_tags` → Stop services → Deploy previous version → Verify health
-- Safety: Audit logging, backup validation, health checks post-rollback
+**Staging vs Production**: Staging (port 80, 7-day backups, 10 retries) | Production (port 8080, 30-day backups, 15 retries, resource limits, stricter logging)
 
 ---
 
