@@ -28,10 +28,9 @@ public class TransactionsServiceApplication {
   }
 
   /**
-   * Seed the transactions database with demo records if it's empty.
+   * Seed the transactions database with a couple of demo records if it's empty.
    *
-   * <p>This helps the frontend demo: you can safely call GET /transactions/1, /transactions/2,
-   * and /transactions/3.
+   * <p>This helps the frontend demo: you can safely call GET /transactions/1 and /transactions/2.
    */
   @Bean
   CommandLineRunner seedTransactions(TransactionRepository repo) {
@@ -43,31 +42,20 @@ public class TransactionsServiceApplication {
       Transaction tx1 =
           new Transaction(
               null,
-              1L, // listingId
+              100L, // listingId (demo value)
               1L, // buyerId
               2L, // sellerId
               TransactionStatus.PENDING,
-              new BigDecimal("120.00"),
+              new BigDecimal("25.00"),
               Instant.now(),
               Instant.now());
 
       Transaction tx2 =
           new Transaction(
               null,
-              2L,
+              101L,
               3L,
               4L,
-              TransactionStatus.CONFIRMED,
-              new BigDecimal("10.00"),
-              Instant.now(),
-              Instant.now());
-
-      Transaction tx3 =
-          new Transaction(
-              null,
-              3L,
-              2L,
-              3L,
               TransactionStatus.CONFIRMED,
               new BigDecimal("0.00"),
               Instant.now(),
@@ -75,7 +63,6 @@ public class TransactionsServiceApplication {
 
       repo.save(tx1);
       repo.save(tx2);
-      repo.save(tx3);
     };
   }
 }

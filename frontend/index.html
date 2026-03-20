@@ -1,199 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EcoCycle Control Center</title>
-  <link rel="stylesheet" href="style.css?v=4">
-  <link rel="stylesheet" href="yellow-accent.css?v=2">
+  <title>Ecocycle Frontend</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="page-glow page-glow-left"></div>
-  <div class="page-glow page-glow-right"></div>
 
-  <main class="app-shell">
-    <section class="hero card">
-      <div class="hero-copy">
-        <div class="hero-topline">
-          <p class="eyebrow">EcoCycle Platform</p>
-          <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false">
-            Switch To Dark
-          </button>
-        </div>
-        <h1>Manage users, listings, and transactions in one place.</h1>
-      </div>
-    </section>
+  <h1>Ecocycle Basic Frontend</h1>
+  <h3>Select a Service</h3>
+  <div style="margin-bottom: 20px;">
+    <input id="userIdInput" type="email" placeholder="Enter email address" />
+    <input id="usernameInput" type="text" placeholder="Username (for registration)" style="display:none;" />
+    <button onclick="login()">Login</button>
+    <button onclick="toggleRegister()" id="toggleBtn">Register</button>
+    <button onclick="register()" id="registerBtn" style="display:none;">Create Account</button>
+  </div>
+  <div class="buttons">
+    <button onclick="callService('users')">Users Service</button>
+    <button onclick="callService('marketplace')">Marketplace Service</button>
+    <button onclick="callService('transactions')">Transactions Service</button>
+  </div>
 
-    <section class="workspace">
-      <div class="panel-stack">
-        <section class="card auth-card">
-          <div class="section-heading">
-            <div>
-              <p class="section-kicker">Authentication</p>
-              <h2>Access your workspace</h2>
-            </div>
-            <span class="status-dot" id="authStatePill">Signed out</span>
-          </div>
+  <div class="output">
+    <h3>Response</h3>
+    <pre id="result">Click a button to fetch data...</pre>
+  </div>
 
-          <div class="form-grid">
-            <label class="field">
-              <span>Email Address</span>
-              <input
-                id="userIdInput"
-                name="ecocycle-auth-email"
-                type="text"
-                inputmode="email"
-                placeholder="name@example.com"
-                autocomplete="off"
-                autocapitalize="none"
-                spellcheck="false"
-              >
-            </label>
-
-            <label class="field" id="usernameField" hidden>
-              <span>Username</span>
-              <input id="usernameInput" type="text" placeholder="Choose a username" autocomplete="username">
-            </label>
-          </div>
-
-          <div class="button-row">
-            <button id="loginBtn" class="primary-btn" type="button">Login</button>
-            <button id="toggleBtn" class="secondary-btn" type="button">Switch To Register</button>
-            <button id="registerBtn" class="ghost-btn" type="button" hidden>Create Account</button>
-            <button id="logoutBtn" class="text-btn" type="button">Sign Out</button>
-          </div>
-
-          <div class="session-card" id="sessionSummary">
-            <p class="session-label">Session</p>
-            <p class="session-value" id="sessionState">No active session</p>
-            <p class="session-note" id="sessionHint">Log in or register to unlock service calls.</p>
-          </div>
-        </section>
-
-        <section class="card services-card">
-          <div class="section-heading">
-            <div>
-              <p class="section-kicker">Marketplace Flow</p>
-              <h2>Choose how you want to continue</h2>
-            </div>
-            <button id="clearBtn" class="text-btn" type="button">Clear Response</button>
-          </div>
-
-          <div class="marketplace-hub">
-            <div class="button-row mode-actions">
-              <button id="buyBtn" class="primary-btn" type="button">Listings</button>
-              <button id="sellBtn" class="secondary-btn" type="button">Sell</button>
-            </div>
-
-            <div class="session-card flow-card" id="marketplacePrompt">
-              <p class="session-label">Next Step</p>
-              <p class="session-value">Sign in to unlock the marketplace flow.</p>
-              <p class="session-note" id="marketplaceHint">
-                After login, choose Listings to load the available items from the marketplace service.
-              </p>
-            </div>
-
-            <section class="listing-panel" id="buyPanel" hidden>
-              <div class="section-heading compact-heading">
-                <div>
-                  <p class="section-kicker">Buy Items</p>
-                  <h2>Choose an item title</h2>
-                </div>
-                <span class="response-meta" id="listingMeta">No items loaded yet</span>
-              </div>
-
-              <div class="listing-grid" id="listingButtons"></div>
-            </section>
-
-            <section class="listing-panel" id="sellPanel" hidden>
-              <div class="section-heading compact-heading">
-                <div>
-                  <p class="section-kicker">Sell Item</p>
-                  <h2>Create a marketplace listing</h2>
-                </div>
-                <span class="response-meta" id="sellMeta">Id and ownerId are created automatically</span>
-              </div>
-
-              <div class="form-grid listing-form-grid">
-                <label class="field">
-                  <span>Seller Name</span>
-                  <input id="sellerNameInput" type="text" placeholder="Your name">
-                </label>
-
-                <label class="field">
-                  <span>Title</span>
-                  <input id="listingTitleInput" type="text" placeholder="Eco-friendly Bike">
-                </label>
-
-                <label class="field">
-                  <span>Type</span>
-                  <select id="listingTypeInput">
-                    <option value="SALE">SALE</option>
-                    <option value="RENTAL">RENTAL</option>
-                    <option value="DONATION">DONATION</option>
-                  </select>
-                </label>
-
-                <label class="field">
-                  <span>Price</span>
-                  <input id="listingPriceInput" type="number" min="0" step="0.01" placeholder="120">
-                </label>
-
-                <label class="field listing-form-span">
-                  <span>Description</span>
-                  <textarea id="listingDescriptionInput" rows="3" placeholder="Describe your item"></textarea>
-                </label>
-
-                <label class="field">
-                  <span>Condition</span>
-                  <input id="listingConditionInput" type="text" placeholder="Like new">
-                </label>
-
-                <label class="field">
-                  <span>Location</span>
-                  <input id="listingLocationInput" type="text" placeholder="Raleigh, NC">
-                </label>
-              </div>
-
-              <div class="button-row mode-actions">
-                <button id="submitListingBtn" class="primary-btn" type="button">Submit Listing</button>
-                <button id="resetListingBtn" class="ghost-btn" type="button">Clear Form</button>
-              </div>
-            </section>
-          </div>
-        </section>
-      </div>
-
-      <section class="card response-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">Live Output</p>
-            <h2>Response Console</h2>
-          </div>
-          <span class="response-meta" id="responseMeta">Waiting for your first action</span>
-        </div>
-
-        <div class="status-banner info" id="statusBanner">
-          Ready. Sign in to start calling services.
-        </div>
-
-        <pre id="result" class="response-viewer">Welcome to EcoCycle.
-
-Use the authentication panel to sign in, then choose a service to inspect its response.</pre>
-
-        <div class="response-actions" id="responseActions">
-          <button id="buySelectedBtn" class="primary-btn" type="button" hidden>Buy</button>
-          <button id="viewTransactionsBtn" class="secondary-btn" type="button">Transactions</button>
-        </div>
-
-        <p class="response-note" id="paymentNote" hidden>
-          Real payment providers like Stripe or PayPal need account credentials and secret keys, so this flow creates the transaction and leaves payment as a safe placeholder for now.
-        </p>
-      </section>
-    </section>
-  </main>
-
-  <script src="script.js?v=6"></script>
+  <script src="script.js"></script>
 </body>
 </html>
-
