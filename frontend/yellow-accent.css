@@ -1,0 +1,18 @@
+.hero {
+  box-shadow: 0 22px 48px rgba(184, 137, 0, 0.18);
+}
+
+.service-tile:hover,
+.primary-btn {
+  box-shadow: 0 12px 30px rgba(184, 137, 0, 0.22);
+}
+
+body.theme-dark .hero {
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.24);
+}
+
+body.theme-dark .service-tile:hover,
+body.theme-dark .primary-btn {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
